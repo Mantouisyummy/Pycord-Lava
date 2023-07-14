@@ -1,9 +1,9 @@
 {
     "nodes": [
         {
-            "host": "node1.windowsed.me",
-            "port": 20006,
-            "password": "youshallnotpass",
+            "host": "",
+            "port": ,
+            "password": "",
             "name": "main",
             "region": "tw",
             "ssl": false
