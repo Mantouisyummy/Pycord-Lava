@@ -1,10 +1,9 @@
 import re
-import json
 import discord
 from os import getpid
 
 from discord import Option, OptionChoice, ButtonStyle, Embed, ApplicationContext, AutocompleteContext
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord.commands import option
 from discord.utils import basic_autocomplete
 from discord.ext.commands import Cog
@@ -28,146 +27,19 @@ allowed_filters = {
     "equalizer": Equalizer
 }
 
-async def music_term(author_id):
-    try:
-        with open("./JSDB/music-term.json", "r") as file:
-            data = json.load(file)
-        
-        enabled = data[str(author_id)]["enabled"]
-        if enabled == "false":
-            return "false"
-    except:
-        return "false"
 
-##### 音樂系統 儲存資料 #####
-class MusicTerm(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-    
-    @discord.ui.button(label="同意條款", emoji="<a:check:1064490541116563476>", style=discord.ButtonStyle.success, custom_id="music:1") 
-    async def accept(self, button, interaction):
-        try:
-            with open("JSDB/custom_embed.json", "r") as file:
-                data = json.load(file)
-        
-            data = data[str(interaction.guild.id)]
-            color = data["color"]
-            color_set = int(color, 16)
-        except:
-            color_set = 0x2e2e2e
-        
-        with open("./JSDB/music-term.json", "r") as file:
-            data = json.load(file)
-                
-            data[str(interaction.user.id)] = {
-                "enabled": "true"}
-        with open("./JSDB/music-term.json", "w") as file:
-            json.dump(data, file, indent=4)
-        
-        embed=discord.Embed(title="", color=color_set)
-        embed.set_author(name=f"您已同意 Youtube 服務條款!", icon_url=(interaction.user.display_avatar.url))
-        embed.add_field(name="<:file:1115287404174135346> ` 系統提示: `", value=f"**請重新使用 /music 指令......**")
-        await interaction.message.edit(embed=embed, view=MusicTermTemp())
-        await interaction.response.send_message(f"**<:youtube:1070326502903779378> | 恭喜! 您現在可以使用 /music 服務!**" , ephemeral=True)
-        
-    @discord.ui.button(label="拒絕條款", emoji="<a:deny:1064490544992108586>", style=discord.ButtonStyle.danger, custom_id="music:2")
-    async def deny(self, button, interaction):
-        try:
-            with open("JSDB/custom_embed.json", "r") as file:
-                data = json.load(file)
-        
-            data = data[str(interaction.guild.id)]
-            color = data["color"]
-            color_set = int(color, 16)
-        except:
-            color_set = 0x2e2e2e
-        
-        with open("./JSDB/music-term.json", "r") as file:
-            data = json.load(file)
-                
-            data[str(interaction.user.id)] = {
-                "enabled": "false"}
-        with open("./JSDB/music-term.json", "w") as file:
-            json.dump(data, file, indent=4)
-        
-        embed=discord.Embed(title="", color=color_set)
-        embed.set_author(name=f"您已拒絕 Youtube 服務條款!", icon_url=(interaction.user.display_avatar.url))
-        embed.add_field(name="<:file:1115287404174135346> ` 系統提示: `", value=f"**指令系統已撤回您的音樂指令請求!**")
-        await interaction.message.edit(embed=embed, view=MusicTermTemp())
-        await interaction.response.send_message(f"**<a:deny:1064490544992108586> | 系統已撤回您的 /music 使用權!**" , ephemeral=True)
-##### 音樂系統 儲存資料 #####
-class MusicTermTemp(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-    
-    @discord.ui.button(label="同意條款", emoji="<a:check:1064490541116563476>", style=discord.ButtonStyle.success, disabled=True, custom_id="music:1") 
-    async def accept(self, button, interaction):
-        try:
-            with open("JSDB/custom_embed.json", "r") as file:
-                data = json.load(file)
-        
-            data = data[str(interaction.guild.id)]
-            color = data["color"]
-            color_set = int(color, 16)
-        except:
-            color_set = 0x2e2e2e
-        
-        with open("./JSDB/music-term.json", "r") as file:
-            data = json.load(file)
-                
-            data[str(interaction.user.id)] = {
-                "enabled": "true"}
-        with open("./JSDB/music-term.json", "w") as file:
-            json.dump(data, file, indent=4)
-        
-        embed=discord.Embed(title="", color=color_set)
-        embed.set_author(name=f"您已同意 Youtube 服務條款!", icon_url=(interaction.user.display_avatar.url))
-        embed.add_field(name="<:file:1115287404174135346> ` 系統提示: `", value=f"**請重新使用 /music 指令......**")
-        await interaction.message.edit(embed=embed, view=MusicTermTemp())
-        await interaction.response.send_message(f"**<:youtube:1070326502903779378> | 恭喜! 您現在可以使用 /music 服務!**" , ephemeral=True)
-        
-    @discord.ui.button(label="拒絕條款", emoji="<a:deny:1064490544992108586>", style=discord.ButtonStyle.danger, disabled=True, custom_id="music:2")
-    async def deny(self, button, interaction):
-        try:
-            with open("JSDB/custom_embed.json", "r") as file:
-                data = json.load(file)
-        
-            data = data[str(interaction.guild.id)]
-            color = data["color"]
-            color_set = int(color, 16)
-        except:
-            color_set = 0x2e2e2e
-        
-        with open("./JSDB/music-term.json", "r") as file:
-            data = json.load(file)
-                
-            data[str(interaction.user.id)] = {
-                "enabled": "false"}
-        with open("./JSDB/music-term.json", "w") as file:
-            json.dump(data, file, indent=4)
-        
-        embed=discord.Embed(title="", color=color_set)
-        embed.set_author(name=f"您已拒絕 Youtube 服務條款!", icon_url=(interaction.user.display_avatar.url))
-        embed.add_field(name="<:file:1115287404174135346> ` 系統提示: `", value=f"**指令系統已撤回您的音樂指令請求!**")
-        await interaction.message.edit(embed=embed, view=MusicTermTemp())
-        await interaction.response.send_message(f"**<a:deny:1064490544992108586> | 系統已撤回您的 /music 使用權!**" , ephemeral=True)
 
 class Commands(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    music_command = discord.SlashCommandGroup("music", "機器人 | 音樂指令")
+    announcement = discord.SlashCommandGroup("music", "機器人 | 音樂指令")
 
     async def search(self, ctx: AutocompleteContext):
         query = ctx.options['query']
-
-        if query.startswith("https://www.youtube.com") is True:
-            print("?")
-            return []
-
         if re.match(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", query):
             return []
-        
+
         if not query:
             return []
 
@@ -178,26 +50,80 @@ class Commands(Cog):
         for track in result.tracks:
             choices.append(
                 OptionChoice(
-                    name=f"{track.title[:80]} by {track.author[:16]}", value=(track.uri + "auto")
+                    name=f"{track.title[:80]} by {track.author[:16]}", value=track.uri
                 )
             )
 
         return choices
 
-    @music_command.command(
-        name='dashboard',
-        description="使用者 | 音樂系統 | 顯示目前正在播放的歌曲"
+    @announcement.command(
+        name="info",
+        description="顯示機器人資訊"
+    )
+    async def info(self, ctx: ApplicationContext):
+
+        embed = Embed(
+            title='機器人資訊',
+            color=0x2b2d31
+        )
+
+        embed.add_field(
+            name='啟動時間',
+            value=f"<t:{round(Process(getpid()).create_time())}:F>",
+            inline=True
+        )
+
+        branch = get_current_branch()
+        upstream_url = get_upstream_url(branch)
+
+        embed.add_field(
+            name='版本資訊',
+            value=f"{get_commit_hash()} on {branch} from {upstream_url}",
+        )
+
+        embed.add_field(name="​", value="​", inline=True)
+
+        embed.add_field(
+            name='CPU',
+            value=f"{cpu_percent()}%",
+            inline=True
+        )
+
+        embed.add_field(
+            name='RAM',
+            value=f"{round(bytes_to_gb(virtual_memory()[3]), 1)} GB / "
+                  f"{round(bytes_to_gb(virtual_memory()[0]), 1)} GB "
+                  f"({virtual_memory()[2]}%)",
+            inline=True
+        )
+
+        embed.add_field(name="​", value="​", inline=True)
+
+        embed.add_field(
+            name='伺服器數量',
+            value=len(self.bot.guilds),
+            inline=True
+        )
+
+        embed.add_field(
+            name='播放器數量',
+            value=len(self.bot.lavalink.player_manager.players),
+            inline=True
+        )
+
+        embed.add_field(name="​", value="​", inline=True)
+
+        await ctx.send(
+            embed=embed
+        )
+
+    @announcement.command(
+        name='nowplaying',
+        description="顯示目前正在播放的歌曲"
     )
     async def nowplaying(self, ctx: ApplicationContext):
         await ctx.response.defer()
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
+
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
 
         player: DefaultPlayer = self.bot.lavalink.player_manager.get(
@@ -206,39 +132,12 @@ class Commands(Cog):
 
         await update_display(self.bot, player, new_message=(await ctx.interaction.original_response()))
 
-    @music_command.command(
+    @announcement.command(
         name="play",
-        description="使用者 | 音樂系統 | 播放音樂",
+        description="播放音樂",
     )
-    async def play(self, ctx: ApplicationContext, query:Option(str, "歌曲名稱或網址，支援 YouTube, YouTube Music, SoundCloud, Spotify", autocomplete=search, name="query"), index:Option(int, "要將歌曲放置於當前播放序列的位置", name="index", required=False)):
+    async def play(self, ctx: ApplicationContext, query:Option(str, "歌曲名稱或網址，支援 YouTube, YouTube Music, SoundCloud,Spotify", autocomplete=search, name="query"), index:Option(int, "要將歌曲放置於當前播放序列的位置", name="index", required=False)):
         await ctx.response.defer()
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
-                          
-        if ctx.author.voice is None:
-            embed=discord.Embed(title=f" ", color=0x2e2e2e)
-            embed.set_author(name=f"警告! 機器人不會通靈!", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 音樂系統: `", value=f"**幫我加入一個語音頻道啦!**", inline=False)
-            await ctx.interaction.edit_original_response(embed=embed)
-            return
-            
-        if "auto" not in query:
-            if "spotify" in query:
-                pass
-            else:
-                embed=discord.Embed(title=f" ", color=0x2e2e2e)
-                embed.set_author(name=f"警告! 外在輸入連結不可用!", icon_url=(ctx.author.display_avatar.url))
-                embed.add_field(name="<:file:1115287404174135346> ` 音樂系統: `", value=f"**||沒辦法... 我怕被 Tos 搞 QAQ||**", inline=False)
-                await ctx.interaction.edit_original_response(embed=embed)
-                return
-        else:
-            query.replace('auto', '')
 
         await ensure_voice(self.bot, ctx=ctx, should_connect=True)
 
@@ -254,6 +153,14 @@ class Commands(Cog):
         if not results or not results.tracks:
             self.bot.logger.info("No results found with lavalink for query %s, checking local sources", query)
             results: LoadResult = await player.node.get_tracks(query, check_local=True)
+
+        if not results or not results.tracks:  # If nothing was found
+            return await ctx.interaction.edit_original_response(
+                embed=ErrorEmbed(
+                    "command.play.error.no_results.title",
+                    "如果你想要使用關鍵字搜尋，請在輸入關鍵字後等待幾秒，搜尋結果將會自動顯示在上方",
+                )
+            )
 
         # Find the index song should be (In front of any autoplay songs)
         if not index:
@@ -280,10 +187,14 @@ class Commands(Cog):
                 )
 
                 # noinspection PyTypeChecker
-                embed=discord.Embed(title=f" ", color=0x2e2e2e)
-                embed.set_author(name=f"{results.tracks[0].title}", icon_url=(ctx.author.display_avatar.url))
-                embed.add_field(name="<:file:1115287404174135346> ` 音樂系統: `", value=f"**正在播放 {results.tracks[0].title[0:50]}**", inline=False)
-                await ctx.interaction.edit_original_response(embed=embed)
+                await ctx.interaction.edit_original_response(
+                    embeds=[
+                               SuccessEmbed(
+                                   "已加入播放序列",
+                                   {results.tracks[0].title}
+                               )
+                           ] + filter_warnings
+                )
 
             case LoadType.PLAYLIST:
                 # TODO: Ask user if they want to add the whole playlist or just some tracks
@@ -295,10 +206,19 @@ class Commands(Cog):
                     )
 
                 # noinspection PyTypeChecker
-                embed=discord.Embed(title=f" ", color=0x2e2e2e)
-                embed.set_author(name=f"{results.tracks[0].title}", icon_url=(ctx.author.display_avatar.url))
-                embed.add_field(name="<:file:1115287404174135346> ` 音樂系統: `", value=f'**已加入播放序列:{len(results.tracks)} / {results.playlist_info.name}\n'.join([f"**[{index + 1}]** {track.title}"for index, track in enumerate(results.tracks[:10])]) + "..." if len(results.tracks) > 10 else "", inline=False)
-                await ctx.interaction.edit_original_response(embed=embed)
+                await ctx.interaction.edit_original_response(
+                    embeds=[
+                               SuccessEmbed(
+                                   title=f"'已加入播放序列' {len(results.tracks)} / {results.playlist_info.name}",
+                                   description='\n'.join(
+                                       [
+                                           f"**[{index + 1}]** {track.title}"
+                                           for index, track in enumerate(results.tracks[:10])
+                                       ]
+                                   ) + "..." if len(results.tracks) > 10 else ""
+                               )
+                           ] + filter_warnings
+                )
 
         # If the player isn't already playing, start it.
         if not player.is_playing:
@@ -308,9 +228,9 @@ class Commands(Cog):
             self.bot, player, await ctx.interaction.original_response(), delay=5
         )
 
-    @music_command.command(
+    @announcement.command(
         name="skip",
-        description="使用者 | 音樂系統 | 跳過當前播放的歌曲")
+        description="跳過當前播放的歌曲")
     async def skip(self, ctx: ApplicationContext, target:Option(
                 int,
                 "要跳到的歌曲編號",
@@ -323,14 +243,7 @@ class Commands(Cog):
                 name="move",
                 required=False
             )):
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
+        
         await ctx.response.defer()
 
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
@@ -365,23 +278,16 @@ class Commands(Cog):
             self.bot, player, await ctx.interaction.original_response(), delay=5
         )
 
-    @music_command.command(
-        name="track_remove",
-        description="使用者 | 音樂系統 | 移除指定歌曲")
+    @announcement.command(
+        name="remove",
+        description="移除歌曲")
     async def remove(self, ctx: ApplicationContext, target: Option(
                 int,
                 "要移除的歌曲編號",
                 name="target",
                 required=True)):
         await ctx.response.defer()
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
+
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
 
         player: DefaultPlayer = self.bot.lavalink.player_manager.get(
@@ -403,20 +309,13 @@ class Commands(Cog):
             self.bot, player, await ctx.interaction.original_response(), delay=5
         )
 
-    @music_command.command(
-        name="track_clean",
-        description="使用者 | 音樂系統 | 清除播放序列"
+    @announcement.command(
+        name="clean",
+        description="清除播放序列"
     )
     async def clean(self, ctx: ApplicationContext):
         await ctx.response.defer()
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
+
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
 
         player: DefaultPlayer = self.bot.lavalink.player_manager.get(
@@ -433,20 +332,13 @@ class Commands(Cog):
             self.bot, player, await ctx.interaction.original_response(), delay=5
         )
 
-    @music_command.command(
+    @announcement.command(
         name="pause",
-        description="使用者 | 音樂系統 | 暫停當前播放的歌曲"
+        description="暫停當前播放的歌曲"
     )
     async def pause(self, ctx: ApplicationContext):
         await ctx.response.defer()
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
+
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
 
         player: DefaultPlayer = self.bot.lavalink.player_manager.get(
@@ -464,20 +356,13 @@ class Commands(Cog):
             embed=SuccessEmbed("已暫停歌曲")
         )
 
-    @music_command.command(
+    @announcement.command(
         name="resume",
-        description="使用者 | 音樂系統 | 恢復當前播放的歌曲"
+        description="恢復當前播放的歌曲"
     )
     async def resume(self, ctx: ApplicationContext):
         await ctx.response.defer()
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
+
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
 
         player: DefaultPlayer = self.bot.lavalink.player_manager.get(
@@ -499,20 +384,13 @@ class Commands(Cog):
             self.bot, player, await ctx.interaction.original_response(), delay=5
         )
 
-    @music_command.command(
+    @announcement.command(
         name="stop",
-        description="使用者 | 音樂系統 | 停止播放並清空播放序列"
+        description="停止播放並清空播放序列"
     )
     async def stop(self, ctx: ApplicationContext):
         await ctx.response.defer()
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
+
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
 
         player: DefaultPlayer = self.bot.lavalink.player_manager.get(
@@ -524,22 +402,15 @@ class Commands(Cog):
 
         await update_display(self.bot, player, await ctx.interaction.original_response())
 
-    @music_command.command(
+    @announcement.command(
         name="connect",
-        description="使用者 | 音樂系統 | 連接至你當前的語音頻道"
+        description="連接至你當前的語音頻道"
     )
     async def connect(self, ctx: ApplicationContext):
         await ctx.response.defer()
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
+
         try:
-            await ensure_voice(bot=self.bot, ctx=ctx, should_connect=True)
+            await ensure_voice(ctx, should_connect=True)
 
             await ctx.interaction.edit_original_response(
                 embed=SuccessEmbed("已連接至語音頻道")
@@ -593,7 +464,6 @@ class Commands(Cog):
             )
 
         finally:
-            player: DefaultPlayer = self.bot.lavalink.player_manager.get(ctx.guild.id)
             await update_display(
                 bot=self.bot,
                 player=player or self.bot.lavalink.player_manager.get(ctx.guild.id),
@@ -601,21 +471,14 @@ class Commands(Cog):
                 delay=5,
             )
 
-    @music_command.command(
+    @announcement.command(
         name="disconnect",
         description=
-            "使用者 | 音樂系統 | 斷開與語音頻道的連接"
+            "斷開與語音頻道的連接"
     )
     async def disconnect(self, ctx: ApplicationContext):
         await ctx.response.defer()
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
+
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
 
         player: DefaultPlayer = self.bot.lavalink.player_manager.get(
@@ -629,21 +492,14 @@ class Commands(Cog):
 
         await update_display(self.bot, player, await ctx.interaction.original_response())
 
-    @music_command.command(
+    @announcement.command(
         name="queue",
-        description="使用者 | 音樂系統 | 顯示播放序列"
+        description="顯示播放序列"
     )
     async def queue(self, ctx: ApplicationContext):
         player = self.bot.lavalink.player_manager.get(ctx.guild.id)
 
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return 
+        
 
         if not player or not player.queue:
             return await ctx.response.send_message(
@@ -687,10 +543,9 @@ class Commands(Cog):
 
         await paginator.start(ctx, pages)
 
-    @music_command.command(
+    @announcement.command(
         name="repeat",
-        description="使用者 | 音樂系統 | 更改重複播放模式"
-    )
+        description="更改重複播放模式",)
     async def repeat(self, ctx: ApplicationContext, mode: Option(
         name="mode",
         description="重複播放模式",
@@ -709,15 +564,6 @@ class Commands(Cog):
                 )
             ],
             required=True)):
-        
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
         
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
 
@@ -739,22 +585,13 @@ class Commands(Cog):
             self.bot, player, await ctx.interaction.original_response(), delay=5
         )
 
-    @music_command.command(
+    @announcement.command(
         name="shuffle",
-        description="使用者 | 音樂系統 | 切換隨機播放模式"
+        description="切換隨機播放模式"
     )
     async def shuffle(self, ctx: ApplicationContext):
         await ctx.response.defer()
-        
-        term = await music_term(ctx.author.id)
-        if term == "false":
-            embed=discord.Embed(title="", color=0x2e2e2e)
-            embed.set_author(name=f"Youtube - 服務條款須知", icon_url=(ctx.author.display_avatar.url))
-            embed.add_field(name="<:file:1115287404174135346> ` 快速簡介: `", value=f"**因於部分原因 您必須先行同意及查看服務條款!**", inline=False)
-            embed.add_field(name="<:youtube:1070326502903779378> ` 服務條款: `", value=f"**[Youtube 服務條款](https://www.youtube.com/t/terms?hl=zh-tw)**", inline=False)
-            await ctx.respond(embed=embed, view=MusicTerm())
-            return
-        
+
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
 
         player: DefaultPlayer = self.bot.lavalink.player_manager.get(
@@ -772,6 +609,5 @@ class Commands(Cog):
         await update_display(
             self.bot, player, await ctx.interaction.original_response(), delay=5
         )
-
 def setup(bot):
     bot.add_cog(Commands(bot))
