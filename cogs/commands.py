@@ -464,6 +464,7 @@ class Commands(Cog):
             )
 
         finally:
+            player: DefaultPlayer = self.bot.lavalink.player_manager.get(ctx.guild.id)
             await update_display(
                 bot=self.bot,
                 player=player or self.bot.lavalink.player_manager.get(ctx.guild.id),
