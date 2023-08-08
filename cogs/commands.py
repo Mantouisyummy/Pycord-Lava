@@ -410,7 +410,7 @@ class Commands(Cog):
         await ctx.response.defer()
 
         try:
-            await ensure_voice(ctx, should_connect=True)
+            await ensure_voice(self.bot, ctx=ctx, should_connect=True)
 
             await ctx.interaction.edit_original_response(
                 embed=SuccessEmbed("已連接至語音頻道")
@@ -456,7 +456,7 @@ class Commands(Cog):
 
             await ctx.guild.voice_client.disconnect(force=False)
 
-            await ensure_voice(ctx, should_connect=True)
+            await ensure_voice(self.bot, ctx=ctx, should_connect=True)
 
             await ctx.interaction.edit_original_response(
                 embed=SuccessEmbed("已連接至語音頻道"),
@@ -464,7 +464,6 @@ class Commands(Cog):
             )
 
         finally:
-            player: DefaultPlayer = self.bot.lavalink.player_manager.get(ctx.guild.id)
             await update_display(
                 bot=self.bot,
                 player=player or self.bot.lavalink.player_manager.get(ctx.guild.id),
@@ -524,6 +523,7 @@ class Commands(Cog):
             )
 
         paginator = Paginator(
+            timeout=60,
             previous_button=Button(
                 style=ButtonStyle.blurple, emoji='⏪'
             ),
