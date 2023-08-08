@@ -524,7 +524,6 @@ class Commands(Cog):
             )
 
         paginator = Paginator(
-            timeout=60,
             previous_button=Button(
                 style=ButtonStyle.blurple, emoji='⏪'
             ),
