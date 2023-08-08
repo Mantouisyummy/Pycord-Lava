@@ -460,11 +460,9 @@ class Commands(Cog):
 
             await ctx.interaction.edit_original_response(
                 embed=SuccessEmbed("已連接至語音頻道"),
-                components=[]
             )
 
         finally:
-            player: DefaultPlayer = self.bot.lavalink.player_manager.get(ctx.guild.id)
             await update_display(
                 bot=self.bot,
                 player=player or self.bot.lavalink.player_manager.get(ctx.guild.id),
