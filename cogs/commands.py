@@ -18,6 +18,8 @@ from core.errors import UserInDifferentChannel
 from core.utils import ensure_voice, update_display, split_list, bytes_to_gb, get_commit_hash, get_upstream_url, \
     get_current_branch
 
+from core.view import View
+
 allowed_filters = {
     "timescale": Timescale,
     "tremolo": Tremolo,
@@ -419,25 +421,27 @@ class Commands(Cog):
         except UserInDifferentChannel:
             player: DefaultPlayer = self.bot.lavalink.player_manager.get(ctx.guild.id)
 
+
+            view = View()
+            view.add_item(item=Button(
+                    label=str(
+                        "繼續"
+                    ),
+                    style=ButtonStyle.green, custom_id="continue"
+                ))
+
             await ctx.interaction.edit_original_response(
                 embed=WarningEmbed(
                     "警告",
                     "機器人已經在一個頻道中了，繼續移動將會中斷對方的音樂播放，是否要繼續?"
                 ),
-                components=[
-                    Button(
-                        label=str(
-                            "繼續"
-                        ),
-                        style=ButtonStyle.green, custom_id="continue"
-                    )
-                ]
+                view=view
             )
 
             try:
                 await self.bot.wait_for(
-                    "button_click",
-                    check=lambda i: i.data.custom_id in ["continue"] and i.user.id == ctx.user.id,
+                    "interaction",
+                    check=lambda i: i.data["custom_id"] == "continue" and i.user.id == ctx.user.id,
                     timeout=10
                 )
 
@@ -446,9 +450,8 @@ class Commands(Cog):
                     embed=ErrorEmbed(
                         "已取消"
                     ),
-                    components=[]
+                    view=None
                 )
-
                 return
 
             await player.stop()
@@ -460,6 +463,7 @@ class Commands(Cog):
 
             await ctx.interaction.edit_original_response(
                 embed=SuccessEmbed("已連接至語音頻道"),
+                view=None
             )
 
         finally:
