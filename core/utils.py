@@ -243,66 +243,66 @@ async def update_display(bot: Bot, player: DefaultPlayer, new_message: Message =
         components = [
                 Button(
                     style=ButtonStyle.green if player.shuffle else ButtonStyle.grey,
-                    emoji="🔀",
+                    emoji="<:world:1076721234152276038>",
                     custom_id="control.shuffle",
                     row=0
                 ),
                 Button(
-                    style=ButtonStyle.blurple,
-                    emoji="⏮️",
+                    style=ButtonStyle.grey,
+                    emoji="<:_left:1130794030771470407>",
                     custom_id="control.previous",
                     row=0
                 ),
                 Button(
                     style=ButtonStyle.green,
-                    emoji="⏸️",
+                    emoji="<:pause:1130474848364273684>",
                     custom_id="control.pause"
                 ) if not player.paused else Button(
                     style=ButtonStyle.red,
-                    emoji="▶️",
+                    emoji="<:dots:1086991737395875920>",
                     custom_id="control.resume",
                     row=0
                 ),
                 Button(
-                    style=ButtonStyle.blurple,
-                    emoji="⏭️",
+                    style=ButtonStyle.grey,
+                    emoji="<:_right:1130793817575006218>",
                     custom_id="control.next",
                     row=0
                 ),
                 Button(
                     style=[ButtonStyle.grey, ButtonStyle.green, ButtonStyle.blurple][player.loop],
-                    emoji="🔁",
+                    emoji="<:sync:1130482503497551992>",
                     custom_id="control.repeat",
                     row=0
                 ),
                 Button(
                     style=ButtonStyle.green if player.fetch("autoplay") else ButtonStyle.grey,
-                    emoji="🔥",
+                    emoji="<:file:1115287404174135346>",
                     custom_id="control.autoplay",
                     disabled=not bool(Variables.SPOTIFY_CLIENT),
                     row=1
                 ),
                 Button(
-                    style=ButtonStyle.blurple,
-                    emoji="⏪",
+                    style=ButtonStyle.grey,
+                    emoji="<:left:1130794140502863943>",
                     custom_id="control.rewind",
                     row=1
                 ),
                 Button(
                     style=ButtonStyle.red,
-                    emoji="⏹️",
+                    emoji="<:delete:1076130754146357310>",
                     custom_id="control.stop",
                     row=1
                 ),
                 Button(
-                    style=ButtonStyle.blurple,
-                    emoji="⏩",
+                    style=ButtonStyle.grey,
+                    emoji="<:right:1130794177827962931>",
                     custom_id="control.forward",
                     row=1
                 ),
                 Button(
                     style=ButtonStyle.grey,
-                    emoji="⬛",
+                    emoji="<:crossmark:1127265792640163840>",
                     custom_id="control.empty",
                     row=1
                 )
@@ -326,14 +326,13 @@ async def update_display(bot: Bot, player: DefaultPlayer, new_message: Message =
 def generate_display_embed(bot: Bot, player: DefaultPlayer) -> Embed:
     embed = Embed()
 
-
     if player.is_playing:
         embed.set_author(
             name="播放中",
             icon_url="https://cdn.discordapp.com/emojis/987643956403781692.webp"
         )
 
-        embed.colour = Colour.green()
+        embed.colour = 0x2e2e2e
 
     elif player.paused:
         embed.set_author(
@@ -349,7 +348,7 @@ def generate_display_embed(bot: Bot, player: DefaultPlayer) -> Embed:
             icon_url="https://cdn.discordapp.com/emojis/987646268094439488.webp"
         )
 
-        embed.colour = Colour.red()
+        embed.colour = 0x2e2e2e
 
     elif not player.current:
         embed.set_author(
@@ -357,7 +356,7 @@ def generate_display_embed(bot: Bot, player: DefaultPlayer) -> Embed:
             icon_url="https://cdn.discordapp.com/emojis/987645074450034718.webp"
         )
 
-        embed.colour = Colour.red()
+        embed.colour = 0x2e2e2e
 
     loop_mode_text = {
         0: '關閉',
@@ -366,47 +365,44 @@ def generate_display_embed(bot: Bot, player: DefaultPlayer) -> Embed:
     }
 
     if player.current:
-        embed.title = player.current.title
+        embed.title = " "
+        embed.set_author(name=f"{player.current.title}", icon_url=(bot.user.display_avatar.url))
         embed.description = f"`{format_time(player.position)}`" \
                             f" {generate_progress_bar(bot, player.current.duration, player.position)} " \
                             f"`{format_time(player.current.duration)}`"
 
-        embed.add_field(name="👤 作者", value=player.current.author, inline=True)
+        embed.add_field(name="<:user:1089127891423477800> ` 歌曲作者 `", value=f"**{player.current.author}**", inline=True)
         embed.add_field(
-            name="👥 點播者",
-            value="自動播放" if not player.current.requester else f"<@{player.current.requester}>",
+            name="<:slash_command:1115945935806156810> ` 點播者 `",
+            value="**自動播放**" if not player.current.requester else f"**<@{player.current.requester}>**",
             inline=True
         )  # Requester will be 0 if the song is added by autoplay
         embed.add_field(
-            name="🔁 重複播放模式", value=loop_mode_text[player.loop],
+            name="<:sync:1130482503497551992> ` 重複播放 `", value=f"**{loop_mode_text[player.loop]}**",
             inline=True
         )
 
         embed.add_field(
-            name="📃 播放序列",
+            name="<:file:1115287404174135346> ` 播放清單 `",
             value=('\n'.join(
                 [
                     f"**[{index + 1}]** {track.title}"
                     for index, track in enumerate(player.queue[:5])
                 ]
-            ) + (f"\n還有更多..." if len(player.queue) > 5 else "")) or
-                  "空",
+            ) + (f"**\n還有更多...**" if len(player.queue) > 5 else "")) or
+                  "**空**",
             inline=True
         )
         embed.add_field(
-            name="⚙️ 已啟用效果器",
-            value=', '.join([key.capitalize() for key in player.filters]) or "無",
+            name="<:setting:1068454475871817799> ` 效果器狀態 `",
+            value=', '.join([key.capitalize() for key in player.filters]) or "**無**",
             inline=True
         )
         embed.add_field(
-            name="🔀 隨機播放",
-            value="開啟"
-            if player.shuffle else "關閉",
+            name="<:world:1076721234152276038> ` 隨機播放 `",
+            value="**開啟**"
+            if player.shuffle else "**關閉**",
             inline=True
-        )
-
-        embed.set_footer(
-            text="如果你覺得音樂怪怪的，可以試著檢查看看效果器設定或是切換語音頻道地區"
         )
 
     else:
@@ -445,8 +441,9 @@ def generate_progress_bar(bot: Bot, duration: Union[float, int], position: Union
 
     percentage = position / duration
 
-    return f"⬜" \
-           f"{'⬜' * round(percentage * 10)}" \
-           f"{'⬜' if percentage != 1 else '⬜'}" \
-           f"{'⬛' * round((1 - percentage) * 10)}" \
-           f"{'⬛' if percentage != 1 else '⬛'}"
+    return f"<:1:1134114363725316138>" \
+           f"{'<:2__:1134114356938952704>' * round(percentage * 10)}" \
+           f"{'<:2__:1134114356938952704>' if percentage != 1 else '<:2__:1134114356938952704>'}" \
+           f"{'<:2:1134114366636183612>' * round((1 - percentage) * 10)}" \
+           f"{'<:2:1134114366636183612>' if percentage != 1 else '<:2:1134114366636183612>'}" \
+           f"<:3:1134114358813794384>"
