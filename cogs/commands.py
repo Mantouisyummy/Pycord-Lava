@@ -16,8 +16,8 @@ from core.embeds import ErrorEmbed, SuccessEmbed, InfoEmbed, WarningEmbed
 from core.errors import UserInDifferentChannel
 from core.utils import ensure_voice, update_display, split_list, bytes_to_gb, get_commit_hash, get_upstream_url, \
     get_current_branch
-
 from core.view import View
+from core.paginator import Paginator
 
 allowed_filters = {
     "timescale": Timescale,
@@ -498,7 +498,7 @@ class Commands(Cog):
         name='queue',
         description="顯示播放序列"
     )
-    async def queue(self, ctx: commands.Context):
+    async def queue(self, ctx: ApplicationContext):
         await ctx.response.defer()
 
         await ensure_voice(self.bot, ctx=ctx, should_connect=False)
@@ -512,65 +512,22 @@ class Commands(Cog):
                 embed=InfoEmbed("播放序列", "播放序列中沒有歌曲")
             )
 
+        pages: list[InfoEmbed] = []
 
-        songs_need_page = 1
-        pages = []
-        page_index = 0
-
-        for iteration, songs_in_page in enumerate(split_list(player.queue, songs_need_page)):
-            page_content = '\n'.join(
-                [
-                    f"**[{index + 1 + (iteration * songs_need_page)}]** {track.title}"
-                    for index, track in enumerate(songs_in_page)
-                ]
+        for iteration, songs_in_page in enumerate(split_list(player.queue, 10)):
+            pages.append(InfoEmbed(
+                title="播放序列",
+                description='\n'.join(
+                        [
+                            f"**[{index + 1 + (iteration * 10)}]** {track.title}"
+                            f" {'🔥' if not track.requester else ''}"
+                            for index, track in enumerate(songs_in_page)
+                        ]
+                    )
+                )
             )
-            pages.append(page_content)
 
-        total_pages = len(pages)
-
-        async def send_page():
-            embed = discord.Embed(title="<:3541854:1031106127238279168> | 播放序列", description=pages[page_index],color=discord.Colour.random())
-            embed.set_footer(text=f"頁數：{page_index+1} / {total_pages}")
-            embed.set_author(name='音樂系統')# , icon_url="https://your_icon_link" #可添加icon鏈結
-            await ctx.interaction.edit_original_response(embed=embed, view=queue_button())
-
-        class queue_button(View):
-            def __init__(self):
-                super().__init__()
-
-            @discord.ui.button(label="上一頁", custom_id="previous_queue",emoji="<:rewinds:1138683401851908196>")
-            async def previous_page(self, button: discord.ui.Button, interaction: discord.Interaction):
-                nonlocal page_index
-                if page_index == 0:
-                    self.previous_page.disabled = True
-                    await interaction.response.edit_message(view=self)
-
-                    embed = discord.Embed(title="<:idea:1139066934797807690> | 提示", description="沒有上一頁了",color=discord.Colour.random())
-                    embed.set_author(name='音樂系統')# , icon_url="https://your_icon_link" #可添加icon鏈結
-                    await interaction.followup.send(embed=embed , ephemeral=True)
-
-                elif page_index > 0:
-                    page_index -= 1
-                    await send_page()
-                    self.previous_page.disabled = False
-                    await interaction.response.edit_message(view=self)
-
-            @discord.ui.button(label="下一頁", custom_id="next_queue",emoji="<:fastforward:1138682837722202162>")
-            async def next_page(self, button: discord.ui.Button, interaction: discord.Interaction):
-                nonlocal page_index
-                if page_index < total_pages - 1:
-                    page_index += 1
-                    await send_page()
-                    self.next_page.disabled = False
-                    await interaction.response.edit_message(view=self)
-                else:
-                    self.next_page.disabled = True
-                    await interaction.response.edit_message(view=self)
-
-                    embed = discord.Embed(title="<:idea:1139066934797807690> | 提示", description="沒有下一頁了",color=discord.Colour.random())
-                    embed.set_author(name='音樂系統')# , icon_url="https://your_icon_link" #可添加icon鏈結
-                    await interaction.followup.send(embed=embed , ephemeral=True)
-        await send_page()
+        await ctx.interaction.edit_original_response(embed=pages[0], view=Paginator(pages, ctx.author.id, None))
 
     @announcement.command(
         name="repeat",
