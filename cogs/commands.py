@@ -7,8 +7,7 @@ from discord.ext import commands
 from discord.commands import option
 from discord.utils import basic_autocomplete
 from discord.ext.commands import Cog
-from discord.ui import Button
-from paginator import Paginator
+from discord.ui import Button , View
 from lavalink import DefaultPlayer, LoadResult, LoadType, Timescale, Tremolo, Vibrato, LowPass, Rotation, Equalizer
 from psutil import cpu_percent, virtual_memory, Process
 
