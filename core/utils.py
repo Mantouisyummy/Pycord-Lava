@@ -1,5 +1,10 @@
 import asyncio
 import subprocess
+import uuid
+import glob
+import json
+
+from os import path
 from typing import Union, Iterable, Optional
 
 from discord import ApplicationContext, Message, Thread, TextChannel, Embed, NotFound, Colour, ButtonStyle, Interaction
@@ -15,6 +20,7 @@ from core.sources.track import SpotifyAudioTrack
 from core.variables import Variables
 from core.voice_client import LavalinkVoiceClient
 from core.view import View
+from core.embeds import ErrorEmbed
 
 
 def get_current_branch() -> str:
@@ -70,6 +76,29 @@ def split_list(input_list, chunk_size) -> Iterable[list]:
 
     if length % chunk_size != 0:
         yield input_list[num_sublists * chunk_size:]
+
+
+async def find_playlist(playlist:str, ctx:ApplicationContext):
+    title = ""
+    id = None
+    uid = 0
+
+    for file_path in glob.glob(path.join("playlist", "*.json")):
+        filename = path.basename(file_path).split('.')[0]
+
+        with open(f"./playlist/{int(filename)}.json","r",encoding="utf-8") as f:
+            data = json.load(f)
+
+        for i in data.keys():
+            if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
+                if data[i]['public'] is True:
+                    title = LoadResult.from_dict(data[i]).playlist_info.name
+                    id = filename
+                    return title, id
+                else:
+                    return await ctx.interaction.edit_original_response(embed=ErrorEmbed(
+                        title="此歌單是非公開的!"
+                    ))
 
 
 async def ensure_voice(bot:Bot, should_connect: bool, interaction: Interaction = None, ctx:ApplicationContext = None) -> LavalinkVoiceClient:

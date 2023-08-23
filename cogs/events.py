@@ -155,8 +155,6 @@ class Events(Cog):
 
                 player: DefaultPlayer = self.bot.lavalink.player_manager.get(interaction.guild_id)
 
-                print(interaction.custom_id)
-
                 match interaction.custom_id:
                     case "control.resume":
                         await player.set_pause(False)

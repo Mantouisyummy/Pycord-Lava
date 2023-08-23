@@ -68,7 +68,6 @@ def load_extensions(bot: Bot) -> Bot:
 
     for extension in extensions:
         bot.load_extension(extension)
-        print("hay!")
 
     return bot
 

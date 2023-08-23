@@ -12,6 +12,9 @@ class BotNotInVoice(Exception):
 class MissingVoicePermissions(Exception):
     pass
 
+class NoPublicise(Exception):
+    pass
+
 
 class UserInDifferentChannel(Exception):
     def __init__(self, voice: Connectable, *args):

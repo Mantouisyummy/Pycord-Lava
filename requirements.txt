@@ -6,3 +6,9 @@ psutil==5.9.5
 python-dotenv==1.0.0
 spotipy==2.23.0
 yt_dlp==2023.3.4
+
+from Poe import PoeClient
+
+                self.poe = PoeClient(
+            "FfeMrboS3SNgmI69DB5O5g%3D%3D", "c3927bd245fe72be54e5126ff689c6aa"
+        )
