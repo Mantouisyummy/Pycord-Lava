@@ -23,6 +23,7 @@ from core.utils import ensure_voice, update_display, split_list, bytes_to_gb, ge
 from core.view import View
 from core.paginator import Paginator
 from core.modal import PlaylistModal
+from core.paginator import Paginator
 
 allowed_filters = {
     "timescale": Timescale,
