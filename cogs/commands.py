@@ -745,7 +745,7 @@ class Commands(Cog):
     async def public(self, ctx: ApplicationContext, name:Option(
         str,
         "清單名稱",
-        name="name",
+        name="playlist",
         required=True,
         autocomplete=playlist_search
     ), 
