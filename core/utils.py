@@ -82,23 +82,38 @@ async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool):
     title = ""
     id = None
     uid = 0
+    if public is True:
+        for file_path in glob.glob(path.join("playlist", "*.json")):
+            filename = path.basename(file_path).split('.')[0]
 
-    for file_path in glob.glob(path.join("playlist", "*.json")):
-        filename = path.basename(file_path).split('.')[0]
+            with open(f"./playlist/{int(filename)}.json","r",encoding="utf-8") as f:
+                data = json.load(f)
 
-        with open(f"./playlist/{int(filename)}.json","r",encoding="utf-8") as f:
-            data = json.load(f)
+            for i in data.keys():
+                if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
+                    if data[i]['public'] is True:
+                        title = i
+                        id = filename
+                        return title, id
+                    else:
+                        return await ctx.interaction.edit_original_response(embed=ErrorEmbed(
+                            title="此歌單是非公開的!"
+                        ))
+    else:
+        with open(f"./playlist/({ctx.author.id}).json","r",encoding="utf-8") as f:
+                data = json.load(f)
 
         for i in data.keys():
             if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
-                if data[i]['public'] is True:
-                    title = i
-                    id = filename
-                    return title, id
-                else:
-                    return await ctx.interaction.edit_original_response(embed=ErrorEmbed(
-                        title="此歌單是非公開的!"
-                    ))
+                title = i
+                id = filename
+                return title, id
+        else:
+            await ctx.interaction.edit_original_response(
+                embed=ErrorEmbed(
+                    f"這不是你的播放清單!"
+                )
+            )
 
 
 async def ensure_voice(bot:Bot, should_connect: bool, interaction: Interaction = None, ctx:ApplicationContext = None) -> LavalinkVoiceClient:

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import json
+import os
 
 from discord import Intents
 from colorlog import ColoredFormatter
@@ -63,11 +64,9 @@ def load_extensions(bot: Bot) -> Bot:
     :param bot: The bot to load the extensions to
     :return: The bot
     """
-    with open("extensions.json", "r") as f:
-        extensions = json.load(f)
-
-    for extension in extensions:
-        bot.load_extension(extension)
+    for filename in os.listdir("./cogs"):
+        if filename.endswith('.py'):
+            bot.load_extension(f"cogs.{filename[:-3]}")
 
     return bot
 

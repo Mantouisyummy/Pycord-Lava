@@ -103,7 +103,7 @@ class Commands(Cog):
 
             return choices
         try: 
-            title, id = await find_playlist(playlist=playlist, ctx=ctx)
+            title, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
             value = uuid.uuid5(uuid.NAMESPACE_DNS, title).hex
 
             choices.append(
@@ -717,11 +717,17 @@ class Commands(Cog):
         if path.isfile(f"./playlist/{ctx.author.id}.json"):
             with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
+            if name not in data.keys():
+                data[name] = {"public": public}
 
-            data[name] = {"public": public}
-
-            with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4)
+                with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=4)
+            else:
+                await ctx.interaction.edit_original_response(
+                        embed=ErrorEmbed(
+                            f"你已經有同名的歌單了!"
+                        )
+                    )
         else:
             with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
                 f.write(json.dumps({name: {"public": public}}, indent=4))
@@ -788,7 +794,7 @@ class Commands(Cog):
     )):
         await ctx.response.defer()
 
-        await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+        await ctx.interaction.edit_original_response(embed=LoadingEmbed(title="正在讀取中..."))
 
         name = ""
         with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
@@ -837,21 +843,14 @@ class Commands(Cog):
             with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            for i in data.keys():
-                if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
-                    name = i
-                    break
-            else:
-                await ctx.interaction.edit_original_response(
-                    embed=ErrorEmbed(
-                        f"這不是你的播放清單!"
-                    )
-                )
+            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
+            
+            modal = PlaylistModal(title="加入歌曲", name=name, bot=self.bot)
+            await ctx.send_modal(modal)
 
         else:
             await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
 
-            name = "" 
             tracks = []
             result: LoadResult = await self.bot.lavalink.get_tracks(query)
 
@@ -904,20 +903,10 @@ class Commands(Cog):
 
         await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
 
-        name = ""
         with open(f"./playlist/{ctx.interaction.user.id}.json", "r" ,encoding="utf-8") as f:
             data = json.load(f)
         
-        for i in data.keys():
-            if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
-                name = i
-                break
-        else:
-                await ctx.interaction.edit_original_response(
-                    embed=ErrorEmbed(
-                        f"這不是你的播放清單!"
-                    )
-                )
+        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
 
         del data[name]['tracks'][song]
 
@@ -949,16 +938,7 @@ class Commands(Cog):
         with open(f"./playlist/{ctx.interaction.user.id}.json", "r" ,encoding="utf-8") as f:
             data = json.load(f)
         
-        for i in data.keys():
-            if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
-                name = i
-                break
-        else:
-            await ctx.interaction.edit_original_response(
-                embed=ErrorEmbed(
-                    f"這不是你的播放清單!"
-                )
-            )
+        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
 
         del data[name]
 
@@ -987,7 +967,7 @@ class Commands(Cog):
             await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
 
             name = ""
-            name, id = await find_playlist(playlist=playlist, ctx=ctx)
+            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
             
             with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -1069,7 +1049,7 @@ class Commands(Cog):
         name = ""
 
         try:
-            name, id = await find_playlist(playlist=playlist, ctx=ctx)
+            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
 
             with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -1095,7 +1075,8 @@ class Commands(Cog):
                     ).set_footer(text=f"ID: {playlist}")
                 )
             await ctx.interaction.edit_original_response(embed=pages[0], view=Paginator(pages, ctx.author.id, None))
-        except TypeError:
+        except TypeError as e:
+            print(e)
             pass
 
 def setup(bot):
