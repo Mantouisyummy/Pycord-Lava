@@ -723,7 +723,7 @@ class Commands(Cog):
                 with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4)
             else:
-                await ctx.interaction.edit_original_response(
+                return await ctx.interaction.edit_original_response(
                         embed=ErrorEmbed(
                             f"你已經有同名的歌單了!"
                         )
@@ -809,7 +809,7 @@ class Commands(Cog):
                 name = i
                 break
         else:
-            await ctx.interaction.edit_original_response(
+            return await ctx.interaction.edit_original_response(
                 embed=ErrorEmbed(
                     f"這不是你的播放清單!"
                 )

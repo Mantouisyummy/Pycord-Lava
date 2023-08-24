@@ -109,7 +109,7 @@ async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool):
                 id = filename
                 return title, id
         else:
-            await ctx.interaction.edit_original_response(
+            return await ctx.interaction.edit_original_response(
                 embed=ErrorEmbed(
                     f"這不是你的播放清單!"
                 )
