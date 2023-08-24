@@ -100,7 +100,7 @@ async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool):
                             title="此歌單是非公開的!"
                         ))
     else:
-        with open(f"./playlist/({ctx.author.id}).json","r",encoding="utf-8") as f:
+        with open(f"./playlist/{ctx.author.id}.json","r",encoding="utf-8") as f:
                 data = json.load(f)
 
         for i in data.keys():
