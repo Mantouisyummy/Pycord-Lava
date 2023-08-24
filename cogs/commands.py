@@ -905,7 +905,7 @@ class Commands(Cog):
     )):
         await ctx.defer()
 
-        await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+        await ctx.interaction.edit_original_response(embed=LoadingEmbed(title="正在讀取中..."))
 
         with open(f"./playlist/{ctx.interaction.user.id}.json", "r" ,encoding="utf-8") as f:
             data = json.load(f)
