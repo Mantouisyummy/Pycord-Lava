@@ -106,7 +106,7 @@ async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool):
         for i in data.keys():
             if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
                 title = i
-                id = filename
+                id = ctx.author.id
                 return title, id
         else:
             return await ctx.interaction.edit_original_response(
