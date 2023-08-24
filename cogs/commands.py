@@ -830,7 +830,7 @@ class Commands(Cog):
     query:Option(
         str, "歌曲名稱，支援 YouTube, YouTube Music, SoundCloud,Spotify (如不填入將切至輸入網址畫面)", 
         autocomplete=search, 
-        name="song",
+        name="query",
         default=False)):
 
         if query is False:
@@ -849,7 +849,6 @@ class Commands(Cog):
                 )
 
         else:
-
             await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
 
             name = "" 
@@ -868,13 +867,11 @@ class Commands(Cog):
                     'uri': f"https://www.youtube.com/watch?v={track.identifier}"
                 })
 
-            await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
-
             with open(f"./playlist/{ctx.user.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
                 
             for key in data.keys():
-                if uuid.uuid5(uuid.NAMESPACE_DNS, key).hex == name:
+                if uuid.uuid5(uuid.NAMESPACE_DNS, key).hex == playlist:
                     name = key
                     break
 
