@@ -762,6 +762,9 @@ class Commands(Cog):
                 data = json.load(f)
 
             data[name]["public"] = public
+            
+            with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=4)
 
         if public is True:
             await ctx.interaction.edit_original_response(
