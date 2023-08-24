@@ -746,7 +746,8 @@ class Commands(Cog):
         str,
         "清單名稱",
         name="name",
-        required=True
+        required=True,
+        autocomplete=playlist_search
     ), 
     public:Option(
         bool,
@@ -762,7 +763,7 @@ class Commands(Cog):
                 data = json.load(f)
 
             data[name]["public"] = public
-            
+
             with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4)
 
