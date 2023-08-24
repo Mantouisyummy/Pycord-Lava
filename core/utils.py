@@ -78,7 +78,7 @@ def split_list(input_list, chunk_size) -> Iterable[list]:
         yield input_list[num_sublists * chunk_size:]
 
 
-async def find_playlist(playlist:str, ctx:ApplicationContext):
+async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool):
     title = ""
     id = None
     uid = 0
@@ -92,7 +92,7 @@ async def find_playlist(playlist:str, ctx:ApplicationContext):
         for i in data.keys():
             if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
                 if data[i]['public'] is True:
-                    title = LoadResult.from_dict(data[i]).playlist_info.name
+                    title = i
                     id = filename
                     return title, id
                 else:

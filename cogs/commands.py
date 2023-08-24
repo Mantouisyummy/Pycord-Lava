@@ -13,10 +13,9 @@ from discord.ui import Button, View
 from discord.errors import NotFound
 from lavalink import DefaultPlayer, LoadResult, LoadType, Timescale, Tremolo, Vibrato, LowPass, Rotation, Equalizer, AudioTrack
 from psutil import cpu_percent, virtual_memory, Process
-from typing import List, Optional
 
 from core.bot import Bot
-from core.embeds import ErrorEmbed, SuccessEmbed, InfoEmbed, WarningEmbed
+from core.embeds import ErrorEmbed, SuccessEmbed, InfoEmbed, WarningEmbed, LoadingEmbed
 from core.errors import UserInDifferentChannel
 from core.utils import ensure_voice, update_display, split_list, bytes_to_gb, get_commit_hash, get_upstream_url, \
     get_current_branch, find_playlist
@@ -125,8 +124,11 @@ class Commands(Cog):
     
     async def songs_search(self, ctx: AutocompleteContext):
         playlist = ctx.options['playlist']
+        song = ctx.options['song']
+
 
         choices = []
+        name = ""
 
         if not playlist:
             return []
@@ -134,7 +136,12 @@ class Commands(Cog):
         with open(f"./playlist/{ctx.interaction.user.id}.json") as f:
             data = json.load(f)
         
-        result = LoadResult.from_dict(data[playlist])
+        for key in data.keys():
+            if uuid.uuid5(uuid.NAMESPACE_DNS, key).hex == playlist:
+                name = key
+                break
+
+        result = LoadResult.from_dict(data[name])
 
         for track in result.tracks:
             choices.append(
@@ -142,6 +149,9 @@ class Commands(Cog):
                     name=track.title, value=track.position
                 )
             )
+
+        if not song:
+            return choices
 
         return choices
     
@@ -711,7 +721,7 @@ class Commands(Cog):
             data[name] = {"public": public}
 
             with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
-                json.dumps(data, f, indent=4)
+                json.dump(data, f, indent=4)
         else:
             with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
                 f.write(json.dumps({name: {"public": public}}, indent=4))
@@ -778,10 +788,24 @@ class Commands(Cog):
     )):
         await ctx.response.defer()
 
+        await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+
+        name = ""
         with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        data[newname] = data.pop(playlist)
+        for i in data.keys():
+            if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
+                name = i
+                break
+        else:
+            await ctx.interaction.edit_original_response(
+                embed=ErrorEmbed(
+                    f"這不是你的播放清單!"
+                )
+            )
+
+        data[newname] = data.pop(name)
 
         with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
@@ -802,11 +826,65 @@ class Commands(Cog):
         name="playlist",
         required=True,
         autocomplete=playlist_search
-    )):
+    ),
+    query:Option(
+        str, "歌曲名稱，支援 YouTube, YouTube Music, SoundCloud,Spotify (如不填入將切至輸入網址畫面)", 
+        autocomplete=search, 
+        name="song",
+        default=False)):
 
-        modal = PlaylistModal(bot=self.bot, name=playlist, title="添加歌曲")
-        await ctx.send_modal(modal)
-    
+        if query is False:
+            with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            for i in data.keys():
+                if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
+                    name = i
+                    break
+            else:
+                await ctx.interaction.edit_original_response(
+                    embed=ErrorEmbed(
+                        f"這不是你的播放清單!"
+                    )
+                )
+
+        else:
+
+            await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+
+            name = "" 
+            tracks = []
+            result: LoadResult = await self.bot.lavalink.get_tracks(query)
+
+            for track in result.tracks:
+                tracks.append({
+                    'track': track.track,       
+                    'identifier': track.identifier,
+                    'isSeekable': track.is_seekable,
+                    'author': track.author,
+                    'length': track.duration,
+                    'isStream': track.stream,
+                    'title': track.title,
+                    'uri': f"https://www.youtube.com/watch?v={track.identifier}"
+                })
+
+            await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+
+            with open(f"./playlist/{ctx.user.id}.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+                
+            for key in data.keys():
+                if uuid.uuid5(uuid.NAMESPACE_DNS, key).hex == name:
+                    name = key
+                    break
+
+            data[name].update({"loadType": "PLAYLIST_LOADED", "playlistInfo": {"name": playlist, "selectedTrack": -1}, "tracks": tracks})
+
+            with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+            
+            await ctx.interaction.edit_original_response(embed=SuccessEmbed(title="添加成功!"))
+
     @playlist.command(
         name="remove",
         description="移除歌曲至指定的歌單"
@@ -827,10 +905,24 @@ class Commands(Cog):
     )):
         await ctx.defer()
 
+        await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+
+        name = ""
         with open(f"./playlist/{ctx.interaction.user.id}.json", "r" ,encoding="utf-8") as f:
             data = json.load(f)
         
-        del data[playlist]['tracks'][song]
+        for i in data.keys():
+            if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
+                name = i
+                break
+        else:
+                await ctx.interaction.edit_original_response(
+                    embed=ErrorEmbed(
+                        f"這不是你的播放清單!"
+                    )
+                )
+
+        del data[name]['tracks'][song]
 
         with open(f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
@@ -841,6 +933,46 @@ class Commands(Cog):
             )
         )
 
+    @playlist.command(
+        name="delete",
+        description="移除指定的歌單"
+    )
+    async def delete(self, ctx: ApplicationContext, playlist:Option(
+        str,
+        "歌單",
+        name="playlist",
+        required=True,
+        autocomplete=playlist_search
+    )):
+        await ctx.defer()
+
+        await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+
+        name = ""
+        with open(f"./playlist/{ctx.interaction.user.id}.json", "r" ,encoding="utf-8") as f:
+            data = json.load(f)
+        
+        for i in data.keys():
+            if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
+                name = i
+                break
+        else:
+            await ctx.interaction.edit_original_response(
+                embed=ErrorEmbed(
+                    f"這不是你的播放清單!"
+                )
+            )
+
+        del data[name]
+
+        with open(f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+        
+        await ctx.interaction.edit_original_response(
+            embed=SuccessEmbed(
+                title="成功移除歌單"
+            )
+        )
     
     @playlist.command(
         name="play",
@@ -855,10 +987,11 @@ class Commands(Cog):
     )):
         await ctx.response.defer()
         try:
+            await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+
             name = ""
-
             name, id = await find_playlist(playlist=playlist, ctx=ctx)
-
+            
             with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
 
