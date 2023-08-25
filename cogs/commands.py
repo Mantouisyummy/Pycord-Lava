@@ -853,13 +853,22 @@ class Commands(Cog):
             await ctx.send_modal(modal)
 
         else:
-            await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+            await ctx.defer()
 
-            tracks = []
+            await ctx.interaction.edit_original_response(embed=LoadingEmbed(title="正在讀取中..."))
+
+            with open(f"./playlist/{ctx.user.id}.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+                
+            for key in data.keys():
+                if uuid.uuid5(uuid.NAMESPACE_DNS, key).hex == playlist:
+                    name = key
+                    break
+
             result: LoadResult = await self.bot.lavalink.get_tracks(query)
 
             for track in result.tracks:
-                tracks.append({
+                data[name]['tracks'].append({
                     'track': track.track,       
                     'identifier': track.identifier,
                     'isSeekable': track.is_seekable,
@@ -870,15 +879,8 @@ class Commands(Cog):
                     'uri': f"https://www.youtube.com/watch?v={track.identifier}"
                 })
 
-            with open(f"./playlist/{ctx.user.id}.json", "r", encoding="utf-8") as f:
-                data = json.load(f)
                 
-            for key in data.keys():
-                if uuid.uuid5(uuid.NAMESPACE_DNS, key).hex == playlist:
-                    name = key
-                    break
-
-            data[name].update({"loadType": "PLAYLIST_LOADED", "playlistInfo": {"name": playlist, "selectedTrack": -1}, "tracks": tracks})
+            data[name].update({"loadType": "PLAYLIST_LOADED", "playlistInfo": {"name": playlist, "selectedTrack": -1}, "tracks": data[name]['tracks']})
 
             with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
@@ -936,7 +938,7 @@ class Commands(Cog):
     )):
         await ctx.defer()
 
-        await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+        await ctx.interaction.edit_original_response(embed=LoadingEmbed(title="正在讀取中..."))
 
         name = ""
         with open(f"./playlist/{ctx.interaction.user.id}.json", "r" ,encoding="utf-8") as f:
