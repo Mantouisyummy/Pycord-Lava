@@ -742,7 +742,7 @@ class Commands(Cog):
         name="public",
         description="切換歌單的公開狀態"
     )
-    async def public(self, ctx: ApplicationContext, name:Option(
+    async def public(self, ctx: ApplicationContext, playlist:Option(
         str,
         "清單名稱",
         name="playlist",
@@ -762,10 +762,18 @@ class Commands(Cog):
             with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
+            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
+
             data[name]["public"] = public
 
             with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4)
+        else:
+            await ctx.interaction.edit_original_response(
+                embed=ErrorEmbed(
+                    f"你沒有播放清單!"
+                )
+            )
 
         if public is True:
             await ctx.interaction.edit_original_response(
