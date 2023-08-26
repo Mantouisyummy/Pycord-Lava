@@ -5,7 +5,7 @@ import glob
 import json
 
 from os import path
-from typing import Union, Iterable, Optional
+from typing import Union, Iterable, Optional, Tuple
 
 from discord import ApplicationContext, Message, Thread, TextChannel, Embed, NotFound, Colour, ButtonStyle, Interaction
 from discord.abc import GuildChannel
@@ -78,7 +78,16 @@ def split_list(input_list, chunk_size) -> Iterable[list]:
         yield input_list[num_sublists * chunk_size:]
 
 
-async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool):
+async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool) -> Union[Tuple[str, Optional[str]], None]:
+    """
+    Find a playlist by uuid.
+
+    :param playlist: The uuid of the playlist.
+    :param ctx: The application context.
+    :param public: Flag indicating whether to search for public playlists.
+    :return: A tuple containing the title and ID of the found playlist if it exists and meets the criteria,
+             or None if the playlist doesn't exist or doesn't meet the criteria.
+    """
     title = ""
     id = None
     uid = 0

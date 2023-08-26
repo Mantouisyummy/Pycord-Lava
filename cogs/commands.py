@@ -2,7 +2,6 @@ import re
 import discord
 import json
 import uuid
-import glob
 
 from os import getpid, path
 from discord import Option, OptionChoice, ButtonStyle, Embed, ApplicationContext, AutocompleteContext, OptionChoice
@@ -75,7 +74,7 @@ class Commands(Cog):
             value = uuid.uuid5(uuid.NAMESPACE_DNS, title).hex
             choices.append(
                 OptionChoice(
-                    name=title, value=value
+                    name=title + f" ({len(data[title]['tracks'])}首)", value=value
                 )
             )
 
@@ -717,8 +716,12 @@ class Commands(Cog):
         if path.isfile(f"./playlist/{ctx.author.id}.json"):
             with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
+
             if name not in data.keys():
-                data[name] = {"public": public}
+                data[name]["public"] = public
+                data[name]["loadType"] = "PLAYLIST_LOADED"
+                data[name]["playlistInfo"] = {"name": name, "selectedTrack": -1}
+                data[name]["tracks"] = []
 
                 with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4)
@@ -730,7 +733,7 @@ class Commands(Cog):
                     )
         else:
             with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
-                f.write(json.dumps({name: {"public": public}}, indent=4))
+                f.write(json.dumps({name:{"public": public, "loadType": "PLAYLIST_LOADED", "playlistInfo": {"name": name, "selectedTrack": -1}, "tracks": []}}, indent=4, ensure_ascii=False))
 
         await ctx.interaction.edit_original_response(
             embed=SuccessEmbed(
@@ -775,16 +778,9 @@ class Commands(Cog):
                 )
             )
 
-        if public is True:
-            await ctx.interaction.edit_original_response(
+        await ctx.interaction.edit_original_response(
                 embed=SuccessEmbed(
-                    f"已切換公開狀態為 `公開`"
-                )
-            )
-        else:
-            await ctx.interaction.edit_original_response(
-                embed=SuccessEmbed(
-                    f"已切換公開狀態為 `非公開`"
+                    f"已切換公開狀態為 `{'公開' if public is True else '非公開'}`"
                 )
             )
 
@@ -888,7 +884,7 @@ class Commands(Cog):
                 })
 
                 
-            data[name].update({"loadType": "PLAYLIST_LOADED", "playlistInfo": {"name": playlist, "selectedTrack": -1}, "tracks": data[name]['tracks']})
+            data[name]["tracks"] = data[name]['tracks']
 
             with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
@@ -978,7 +974,7 @@ class Commands(Cog):
     )):
         await ctx.response.defer()
         try:
-            await ctx.interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+            await ctx.interaction.edit_original_response(embed=LoadingEmbed(title="正在讀取中..."))
 
             name = ""
             name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)

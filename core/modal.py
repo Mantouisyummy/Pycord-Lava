@@ -28,15 +28,15 @@ class PlaylistModal(Modal):
                 result = await self.bot.lavalink.get_tracks(query)
                 for track in result.tracks:
                     data[self.name]['tracks'].append({
-                                'track': track.track,       
-                                'identifier': track.identifier,
-                                'isSeekable': track.is_seekable,
-                                'author': track.author,
-                                'length': track.duration,
-                                'isStream': track.stream,
-                                'title': track.title,
-                                'uri': f"https://www.youtube.com/watch?v={track.identifier}"
-                            })
+                        'track': track.track,       
+                        'identifier': track.identifier,
+                        'isSeekable': track.is_seekable,
+                        'author': track.author,
+                        'length': track.duration,
+                        'isStream': track.stream,
+                        'title': track.title,
+                        'uri': f"https://www.youtube.com/watch?v={track.identifier}"
+                    })
             
             await interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
                 
@@ -45,7 +45,7 @@ class PlaylistModal(Modal):
                     self.name = name
                     break
 
-            data[self.name].update({"loadType": "PLAYLIST_LOADED", "playlistInfo": {"name": self.name, "selectedTrack": -1}, "tracks": data[self.name]['tracks']})
+            data[self.name]["tracks"] = data[self.name]['tracks']
 
             with open(f"./playlist/{interaction.user.id}.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
