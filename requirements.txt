@@ -1,8 +1,8 @@
 colorlog==6.7.0
 py-cord==2.4.1
 lavalink==4.0.6
-pycord-paging==1.0.0
 psutil==5.9.5
 python-dotenv==1.0.0
 spotipy==2.23.0
 yt_dlp==2023.3.4
+pynacl
