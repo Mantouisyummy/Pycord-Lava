@@ -1059,45 +1059,50 @@ class Commands(Cog):
         name = ""
         id = 0
 
-        try:
-            with open(f"./playlist/{ctx.interaction.user.id}.json") as f:
-                data = json.load(f)
-
-            for title in data.keys():
-                value = uuid.uuid5(uuid.NAMESPACE_DNS, title).hex
-                if value == playlist:
-                    name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
-                    break
-            else:
-                name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
-
-            with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
+        if path.isfile(f"./playlist/{ctx.author.id}.json"):
+            try:
+                with open(f"./playlist/{ctx.author.id}.json") as f:
                     data = json.load(f)
 
-            if not data[name]['tracks']:
-                return await ctx.interaction.edit_original_response(
-                    embed=InfoEmbed("歌單", "歌單中沒有歌曲")
-                )
+                for title in data.keys():
+                    value = uuid.uuid5(uuid.NAMESPACE_DNS, title).hex
+                    if value == playlist:
+                        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
+                        break
+                else:
+                    name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
 
-            results = LoadResult.from_dict(data[name])
+                with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
+                        data = json.load(f)
 
-            pages: list[InfoEmbed] = []
+                if not data[name]['tracks']:
+                    return await ctx.interaction.edit_original_response(
+                        embed=InfoEmbed("歌單", "歌單中沒有歌曲")
+                    )
 
-            for iteration, songs_in_page in enumerate(split_list(results.tracks, 10)):
-                pages.append(InfoEmbed(
-                    title=f"{name} - 歌單資訊",
-                    description='\n'.join(
-                            [
-                                f"**[{index + 1 + (iteration * 10)}]** {track.title}"
-                                for index, track in enumerate(songs_in_page)
-                            ]
-                        )
-                    ).set_footer(text=f"ID: {playlist}")
-                )
-            await ctx.interaction.edit_original_response(embed=pages[0], view=Paginator(pages, ctx.author.id, None))
-        except TypeError as e:
-            print(e)
-            pass
+                results = LoadResult.from_dict(data[name])
+
+                pages: list[InfoEmbed] = []
+
+                for iteration, songs_in_page in enumerate(split_list(results.tracks, 10)):
+                    pages.append(InfoEmbed(
+                        title=f"{name} - 歌單資訊",
+                        description='\n'.join(
+                                [
+                                    f"**[{index + 1 + (iteration * 10)}]** {track.title}"
+                                    for index, track in enumerate(songs_in_page)
+                                ]
+                            )
+                        ).set_footer(text=f"ID: {playlist}")
+                    )
+                await ctx.interaction.edit_original_response(embed=pages[0], view=Paginator(pages, ctx.author.id, None))
+            except TypeError as e:
+                print(e)
+                pass
+        else:
+            return await ctx.interaction.edit_original_response(
+                embed=ErrorEmbed("你沒有播放清單!")
+            )
 
 def setup(bot):
     bot.add_cog(Commands(bot))
