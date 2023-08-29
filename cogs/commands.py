@@ -1057,9 +1057,19 @@ class Commands(Cog):
         await ctx.defer()
 
         name = ""
+        id = 0
 
         try:
-            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
+            with open(f"./playlist/{ctx.interaction.user.id}.json") as f:
+                data = json.load(f)
+
+            for title in data.keys():
+                value = uuid.uuid5(uuid.NAMESPACE_DNS, title).hex
+                if value == playlist:
+                    name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
+                    break
+            else:
+                name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
 
             with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
