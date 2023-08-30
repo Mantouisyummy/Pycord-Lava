@@ -1061,7 +1061,7 @@ class Commands(Cog):
 
         if path.isfile(f"./playlist/{ctx.author.id}.json"):
             try:
-                with open(f"./playlist/{ctx.author.id}.json") as f:
+                with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
 
                 for title in data.keys():
