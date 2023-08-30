@@ -48,7 +48,7 @@ class PlaylistModal(Modal):
             data[self.name]["tracks"] = data[self.name]['tracks']
 
             with open(f"./playlist/{interaction.user.id}.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4)
+                json.dump(data, f, indent=4, ensure_ascii=False)
             
             await interaction.edit_original_response(embed=SuccessEmbed(title="添加成功!"))
         else:

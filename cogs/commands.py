@@ -724,7 +724,7 @@ class Commands(Cog):
                 data[name]["tracks"] = []
 
                 with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=4)
+                    json.dump(data, f, indent=4, ensure_ascii=False)
             else:
                 return await ctx.interaction.edit_original_response(
                         embed=ErrorEmbed(
@@ -770,7 +770,7 @@ class Commands(Cog):
             data[name]["public"] = public
 
             with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=4)
+                    json.dump(data, f, indent=4, ensure_ascii=False)
         else:
             await ctx.interaction.edit_original_response(
                 embed=ErrorEmbed(
@@ -822,7 +822,7 @@ class Commands(Cog):
         data[newname] = data.pop(name)
 
         with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
+            json.dump(data, f, indent=4, ensure_ascii=False)
 
         await ctx.interaction.edit_original_response(
             embed=SuccessEmbed(
@@ -887,7 +887,7 @@ class Commands(Cog):
             data[name]["tracks"] = data[name]['tracks']
 
             with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4)
+                json.dump(data, f, indent=4, ensure_ascii=False)
             
             await ctx.interaction.edit_original_response(embed=SuccessEmbed(title="添加成功!"))
 
@@ -921,7 +921,7 @@ class Commands(Cog):
         del data[name]['tracks'][song]
 
         with open(f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
+            json.dump(data, f, indent=4, ensure_ascii=False)
         
         await ctx.interaction.edit_original_response(
             embed=SuccessEmbed(
@@ -953,7 +953,7 @@ class Commands(Cog):
         del data[name]
 
         with open(f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
+            json.dump(data, f, indent=4, ensure_ascii=False)
         
         await ctx.interaction.edit_original_response(
             embed=SuccessEmbed(
