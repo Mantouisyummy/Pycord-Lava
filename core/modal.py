@@ -24,7 +24,7 @@ class PlaylistModal(Modal):
         with open(f"./playlist/{interaction.user.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
         if not len(self.children[0].value.split("\n")) > 25 and not (len(data[self.name]['tracks']) + len(self.children[0].value.split("\n"))) > 25:
-            await interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中..."))
+            await interaction.response.send_message(embed=LoadingEmbed(title="正在讀取中...."))
             
             for query in self.children[0].value.split("\n"):
                 result = await self.bot.lavalink.get_tracks(query)
