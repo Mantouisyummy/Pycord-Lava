@@ -67,11 +67,11 @@ class Commands(Cog):
 
         choices = []
 
-        with open(f"./playlist/{ctx.interaction.user.id}.json") as f:
+        with open(f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8") as f:
             data = json.load(f)
 
         for title in data.keys():
-            value = uuid.uuid5(uuid.NAMESPACE_DNS, title).hex
+            value = uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + title).hex
             choices.append(
                 OptionChoice(
                     name=title + f" ({len(data[title]['tracks'])}首)", value=value
@@ -90,20 +90,25 @@ class Commands(Cog):
         title = ""
 
         if not playlist:
-            with open(f"./playlist/{ctx.interaction.user.id}.json") as f:
-                data = json.load(f)
-            for title in data.keys():
-                value = uuid.uuid5(uuid.NAMESPACE_DNS, title).hex
-                choices.append(
-                    OptionChoice(
-                        name=title, value=value
+            if path.isfile(f"./playlist/{ctx.interaction.user.id}.json"):
+                with open(f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for title in data.keys():
+                    value = uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + title).hex
+                    choices.append(
+                        OptionChoice(
+                            name=title, value=value
+                        )
                     )
-                )
 
-            return choices
+                return choices
+            else:
+                return []
         try: 
             title, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
-            value = uuid.uuid5(uuid.NAMESPACE_DNS, title).hex
+            value = uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + title).hex
+            print(value)
+            print(title)
 
             choices.append(
                 OptionChoice(
@@ -131,23 +136,25 @@ class Commands(Cog):
 
         if not playlist:
             return []
-        
-        with open(f"./playlist/{ctx.interaction.user.id}.json") as f:
-            data = json.load(f)
-        
-        for key in data.keys():
-            if uuid.uuid5(uuid.NAMESPACE_DNS, key).hex == playlist:
-                name = key
-                break
+        if path.isfile(f"./playlist/{ctx.interaction.user.id}.json"):
+            with open(f"./playlist/{ctx.interaction.user.id}.json") as f:
+                data = json.load(f)
+            
+            for key in data.keys():
+                if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + key).hex == playlist:
+                    name = key
+                    break
 
-        result = LoadResult.from_dict(data[name])
+            result = LoadResult.from_dict(data[name])
 
-        for track in result.tracks:
-            choices.append(
-                OptionChoice(
-                    name=track.title, value=track.position
+            for track in result.tracks:
+                choices.append(
+                    OptionChoice(
+                        name=track.title, value=track.position
+                    )
                 )
-            )
+        else:
+            return []
 
         if not song:
             return choices
@@ -865,7 +872,7 @@ class Commands(Cog):
                 data = json.load(f)
                 
             for key in data.keys():
-                if uuid.uuid5(uuid.NAMESPACE_DNS, key).hex == playlist:
+                if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.user.id) + key).hex == playlist:
                     name = key
                     break
 
@@ -883,7 +890,6 @@ class Commands(Cog):
                     'uri': f"https://www.youtube.com/watch?v={track.identifier}"
                 })
 
-                
             data[name]["tracks"] = data[name]['tracks']
 
             with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
@@ -1065,12 +1071,10 @@ class Commands(Cog):
                     data = json.load(f)
 
                 for title in data.keys():
-                    value = uuid.uuid5(uuid.NAMESPACE_DNS, title).hex
+                    value = uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.author.id) + title).hex
                     if value == playlist:
                         name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
                         break
-                else:
-                    name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
 
                 with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
                         data = json.load(f)
@@ -1097,12 +1101,34 @@ class Commands(Cog):
                     )
                 await ctx.interaction.edit_original_response(embed=pages[0], view=Paginator(pages, ctx.author.id, None))
             except TypeError as e:
-                print(e)
                 pass
         else:
-            return await ctx.interaction.edit_original_response(
-                embed=ErrorEmbed("你沒有播放清單!")
-            )
+            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
+
+            with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+            if not data[name]['tracks']:
+                return await ctx.interaction.edit_original_response(
+                    embed=InfoEmbed("歌單", "歌單中沒有歌曲")
+                )
+
+            results = LoadResult.from_dict(data[name])
+
+            pages: list[InfoEmbed] = []
+
+            for iteration, songs_in_page in enumerate(split_list(results.tracks, 10)):
+                pages.append(InfoEmbed(
+                    title=f"{name} - 歌單資訊",
+                    description='\n'.join(
+                            [
+                                f"**[{index + 1 + (iteration * 10)}]** {track.title}"
+                                for index, track in enumerate(songs_in_page)
+                            ]
+                        )
+                    ).set_footer(text=f"ID: {playlist}")
+                )
+            await ctx.interaction.edit_original_response(embed=pages[0], view=Paginator(pages, ctx.author.id, None))
 
 def setup(bot):
     bot.add_cog(Commands(bot))
