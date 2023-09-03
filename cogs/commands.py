@@ -1068,21 +1068,12 @@ class Commands(Cog):
         name = ""
         id = 0
 
-        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
+        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
 
         if ctx.author.id == id:
             try:
                 with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
-
-                for title in data.keys():
-                    value = uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.author.id) + title).hex
-                    if value == playlist:
-                        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
-                        break
-
-                with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
-                        data = json.load(f)
 
                 if not data[name]['tracks']:
                     return await ctx.interaction.edit_original_response(
@@ -1108,6 +1099,8 @@ class Commands(Cog):
             except TypeError as e:
                 pass
         else:
+            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
+
             with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
 
