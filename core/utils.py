@@ -99,21 +99,23 @@ async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool) -> Un
                 data = json.load(f)
 
             for i in data.keys():
-                if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.author.id) + i).hex == playlist:
+                if uuid.uuid5(uuid.NAMESPACE_DNS, str(filename) + i).hex == playlist:
                     if data[i]['public'] is True:
                         title = i
                         id = filename
+                        print(id)
+                        print(title)
                         return title, id
                     else:
                         return await ctx.interaction.edit_original_response(embed=ErrorEmbed(
                             title="此歌單是非公開的"
                         ))
     else:
-        with open(f"./playlist/{ctx.author.id}.json","r",encoding="utf-8") as f:
+        with open(f"./playlist/{ctx.interaction.user.id}.json","r",encoding="utf-8") as f:
                 data = json.load(f)
 
         for i in data.keys():
-            if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.author.id) + i).hex == playlist:
+            if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + i).hex == playlist:
                 title = i
                 id = ctx.author.id
                 return title, id
@@ -478,7 +480,7 @@ def format_time(time: Union[float, int]) -> str:
 
     days, hours, minutes, seconds = map(round, (days, hours, minutes, seconds))
 
-    return f"{str(minutes).zfill(2)}:{str(seconds).zfill(2)}"
+    return f"{str(hours).zfill(2)}:{str(minutes).zfill(2)}:{str(seconds).zfill(2)}"
 
 
 def generate_progress_bar(bot: Bot, duration: Union[float, int], position: Union[float, int]):

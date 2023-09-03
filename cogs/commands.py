@@ -65,16 +65,19 @@ class Commands(Cog):
     async def playlist_search(self, ctx: AutocompleteContext):
         playlist = ctx.options['playlist']
 
+        name = ""
+        id = 0
+
         choices = []
 
         with open(f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        for title in data.keys():
-            value = uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + title).hex
+        for name in data.keys():
+            value = uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + name).hex
             choices.append(
                 OptionChoice(
-                    name=title + f" ({len(data[title]['tracks'])}首)", value=value
+                    name=name + f" ({len(data[name]['tracks'])}首)", value=value
                 )
             )
 
@@ -106,7 +109,7 @@ class Commands(Cog):
                 return []
         try: 
             title, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
-            value = uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + title).hex
+            value = uuid.uuid5(uuid.NAMESPACE_DNS, str(id) + title).hex
             print(value)
             print(title)
 
@@ -118,7 +121,7 @@ class Commands(Cog):
 
             return choices
         
-        except (NotFound, TypeError):
+        except (NotFound, TypeError) as e:
             choices.append(
                 OptionChoice(
                     name="此歌單為非公開!", value=playlist
@@ -816,7 +819,7 @@ class Commands(Cog):
             data = json.load(f)
 
         for i in data.keys():
-            if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
+            if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.author.id) + i).hex == playlist:
                 name = i
                 break
         else:
@@ -1065,7 +1068,9 @@ class Commands(Cog):
         name = ""
         id = 0
 
-        if path.isfile(f"./playlist/{ctx.author.id}.json"):
+        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
+
+        if ctx.author.id == id:
             try:
                 with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -1103,8 +1108,6 @@ class Commands(Cog):
             except TypeError as e:
                 pass
         else:
-            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
-
             with open(f"./playlist/{id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
 
@@ -1119,7 +1122,7 @@ class Commands(Cog):
 
             for iteration, songs_in_page in enumerate(split_list(results.tracks, 10)):
                 pages.append(InfoEmbed(
-                    title=f"{name} - 歌單資訊",
+                    title=f"{name} - 歌單資訊 by {self.bot.get_user(int(id)).name}",
                     description='\n'.join(
                             [
                                 f"**[{index + 1 + (iteration * 10)}]** {track.title}"
