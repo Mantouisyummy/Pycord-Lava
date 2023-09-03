@@ -99,7 +99,7 @@ async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool) -> Un
                 data = json.load(f)
 
             for i in data.keys():
-                if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
+                if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.author.id) + i).hex == playlist:
                     if data[i]['public'] is True:
                         title = i
                         id = filename
@@ -113,7 +113,7 @@ async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool) -> Un
                 data = json.load(f)
 
         for i in data.keys():
-            if uuid.uuid5(uuid.NAMESPACE_DNS, i).hex == playlist:
+            if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.author.id) + i).hex == playlist:
                 title = i
                 id = ctx.author.id
                 return title, id
