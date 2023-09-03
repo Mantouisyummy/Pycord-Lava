@@ -108,7 +108,7 @@ async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool) -> Un
                         return title, id
                     else:
                         return await ctx.interaction.edit_original_response(embed=ErrorEmbed(
-                            title="此歌單是非公開的"
+                            title="此歌單是非公開的!"
                         ))
     else:
         with open(f"./playlist/{ctx.interaction.user.id}.json","r",encoding="utf-8") as f:
