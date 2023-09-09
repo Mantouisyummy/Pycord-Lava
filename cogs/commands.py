@@ -13,15 +13,15 @@ from discord.errors import NotFound
 from lavalink import DefaultPlayer, LoadResult, LoadType, Timescale, Tremolo, Vibrato, LowPass, Rotation, Equalizer, AudioTrack
 from psutil import cpu_percent, virtual_memory, Process
 
-from core.bot import Bot
-from core.embeds import ErrorEmbed, SuccessEmbed, InfoEmbed, WarningEmbed, LoadingEmbed
-from core.errors import UserInDifferentChannel
-from core.utils import ensure_voice, update_display, split_list, bytes_to_gb, get_commit_hash, get_upstream_url, \
+from lava.bot import Bot
+from lava.embeds import ErrorEmbed, SuccessEmbed, InfoEmbed, WarningEmbed, LoadingEmbed
+from lava.errors import UserInDifferentChannel
+from lava.utils import ensure_voice, update_display, split_list, bytes_to_gb, get_commit_hash, get_upstream_url, \
     get_current_branch, find_playlist
-from core.view import View
-from core.paginator import Paginator
-from core.modal import PlaylistModal
-from core.paginator import Paginator
+from lava.view import View
+from lava.paginator import Paginator
+from lava.modal import PlaylistModal
+from lava.paginator import Paginator
 
 allowed_filters = {
     "timescale": Timescale,
@@ -982,6 +982,7 @@ class Commands(Cog):
         autocomplete=global_playlist_search
     )):
         await ctx.response.defer()
+
         try:
             await ctx.interaction.edit_original_response(embed=LoadingEmbed(title="正在讀取中..."))
 
@@ -1020,7 +1021,7 @@ class Commands(Cog):
             index = sum(1 for t in player.queue if t.requester)
 
             results = LoadResult.from_dict(data[name])
-    
+
             for iter_index, track in enumerate(results.tracks):
                 player.add(
                     requester=ctx.author.id, track=track,
@@ -1048,6 +1049,7 @@ class Commands(Cog):
             await update_display(
                 self.bot, player, await ctx.interaction.original_response(), delay=5
             )
+
         except TypeError:
             pass
 

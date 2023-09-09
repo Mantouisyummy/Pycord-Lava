@@ -6,8 +6,8 @@ from discord import InputTextStyle, Interaction
 from lavalink import LoadResult, LoadType, PlaylistInfo, AudioTrack
 from typing import Optional
 
-from core.bot import Bot
-from core.embeds import LoadingEmbed, SuccessEmbed, ErrorEmbed
+from lava.bot import Bot
+from lava.embeds import LoadingEmbed, SuccessEmbed, ErrorEmbed
 
 class PlaylistModal(Modal):
     def __init__(self, name:str, bot:Bot, *args, **kwargs) -> None:
