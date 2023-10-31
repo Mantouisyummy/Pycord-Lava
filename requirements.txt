@@ -4,5 +4,5 @@ lavalink==4.0.6
 psutil==5.9.5
 python-dotenv==1.0.0
 spotipy==2.23.0
-yt_dlp==2023.3.4
+yt_dlp==2023.10.13
 PyNaCl
