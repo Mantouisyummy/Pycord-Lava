@@ -21,6 +21,7 @@ from lava.variables import Variables
 from lava.voice_client import LavalinkVoiceClient
 from lava.view import View
 from lava.embeds import ErrorEmbed
+from lava.playlist import Playlist
 
 
 def check_remote_diff():
@@ -86,7 +87,7 @@ def split_list(input_list, chunk_size) -> Iterable[list]:
         yield input_list[num_sublists * chunk_size:]
 
 
-async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool) -> Union[Tuple[str, Optional[str]], None]:
+async def find_playlist(playlist:str, ctx:ApplicationContext) -> Union[Tuple[str, Optional[str]], int]:
     """
     Find a playlist by uuid.
 
@@ -94,45 +95,19 @@ async def find_playlist(playlist:str, ctx:ApplicationContext, public:bool) -> Un
     :param ctx: The application context.
     :param public: Flag indicating whether to search for public playlists.
     :return: A tuple containing the title and ID of the found playlist if it exists and meets the criteria,
-             or None if the playlist doesn't exist or doesn't meet the criteria.
+             or -1 if the playlist doesn't exist or doesn't meet the criteria.
     """
-    title = ""
-    id = None
-    uid = 0
-    if public is True:
-        for file_path in glob.glob(path.join("playlist", "*.json")):
-            filename = path.basename(file_path).split('.')[0]
 
-            with open(f"./playlist/{int(filename)}.json","r",encoding="utf-8") as f:
-                data = json.load(f)
+    result = Playlist.from_uuid(playlist)
 
-            for i in data.keys():
-                if uuid.uuid5(uuid.NAMESPACE_DNS, str(filename) + i).hex == playlist:
-                    if data[i]['public'] is True:
-                        title = i
-                        id = filename
-                        print(id)
-                        print(title)
-                        return title, id
-                    else:
-                        return await ctx.interaction.edit_original_response(embed=ErrorEmbed(
-                            title="此歌單是非公開的!"
-                        ))
+    if result.public is False and result.user_id != ctx.author.id:
+        await ctx.interaction.edit_original_response(embed=ErrorEmbed(
+            title="此歌單是非公開的!"
+        ))
+    elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.author.id:
+        return result.name, result.user_id
     else:
-        with open(f"./playlist/{ctx.interaction.user.id}.json","r",encoding="utf-8") as f:
-                data = json.load(f)
-
-        for i in data.keys():
-            if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + i).hex == playlist:
-                title = i
-                id = ctx.author.id
-                return title, id
-        else:
-            return await ctx.interaction.edit_original_response(
-                embed=ErrorEmbed(
-                    f"這不是你的播放清單!"
-                )
-            )
+        return result.name, result.user_id
 
 
 async def ensure_voice(bot:Bot, should_connect: bool, interaction: Interaction = None, ctx:ApplicationContext = None) -> LavalinkVoiceClient:
