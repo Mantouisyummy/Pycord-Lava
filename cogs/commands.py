@@ -775,7 +775,7 @@ class Commands(Cog):
             with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
+            name = await find_playlist(playlist=playlist, ctx=ctx)[0]
 
             data[name]["public"] = public
 
@@ -861,7 +861,7 @@ class Commands(Cog):
             with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
+            name, id = await find_playlist(playlist=playlist, ctx=ctx,)
             
             modal = PlaylistModal(title="加入歌曲", name=name, bot=self.bot)
             await ctx.send_modal(modal)
@@ -925,7 +925,7 @@ class Commands(Cog):
         with open(f"./playlist/{ctx.interaction.user.id}.json", "r" ,encoding="utf-8") as f:
             data = json.load(f)
         
-        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
+        name, id = await find_playlist(playlist=playlist, ctx=ctx,)
 
         del data[name]['tracks'][song]
 
@@ -957,7 +957,7 @@ class Commands(Cog):
         with open(f"./playlist/{ctx.interaction.user.id}.json", "r" ,encoding="utf-8") as f:
             data = json.load(f)
         
-        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
+        name, id = await find_playlist(playlist=playlist, ctx=ctx,)
 
         del data[name]
 
@@ -1070,7 +1070,7 @@ class Commands(Cog):
         name = ""
         id = 0
 
-        name, id = await find_playlist(playlist=playlist, ctx=ctx, public=False)
+        name, id = await find_playlist(playlist=playlist, ctx=ctx)
 
         if ctx.author.id == id:
             try:
@@ -1098,7 +1098,7 @@ class Commands(Cog):
                         ).set_footer(text=f"ID: {playlist}")
                     )
                 await ctx.interaction.edit_original_response(embed=pages[0], view=Paginator(pages, ctx.author.id, None))
-            except TypeError as e:
+            except TypeError:
                 pass
         else:
             name, id = await find_playlist(playlist=playlist, ctx=ctx, public=True)
