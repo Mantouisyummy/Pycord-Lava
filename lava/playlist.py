@@ -9,8 +9,9 @@ class Playlist:
         self.name = name
         self.user_id = user_id
         self.public = public
-    
-    def get_item(uid: str):
+
+    @classmethod
+    def get_item(cls, uid: str):
         for file_path in glob.glob(path.join("playlist", "*.json")):
             filename = path.basename(file_path).split('.')[0]
 
@@ -23,9 +24,8 @@ class Playlist:
                     title: str = i
                     public: bool = data[i]['public']
                     return title, user_id, public
-        return None
+        return cls()
                         
-
     def __repr__(self) -> str:
         return "<Playlist name={0.name} uuid={0.user_id} public={0.public}>".format(self)
 

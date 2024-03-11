@@ -7,7 +7,7 @@ import json
 from os import path
 from typing import Union, Iterable, Optional, Tuple
 
-from discord import ApplicationContext, Message, Thread, TextChannel, Embed, NotFound, Colour, ButtonStyle, Interaction
+from discord import ApplicationContext, Message, Thread, TextChannel, Embed, NotFound, Colour, ButtonStyle, Interaction, AutocompleteContext
 from discord.abc import GuildChannel
 from discord.ui import Button
 from discord.utils import get
@@ -87,7 +87,7 @@ def split_list(input_list, chunk_size) -> Iterable[list]:
         yield input_list[num_sublists * chunk_size:]
 
 
-async def find_playlist(playlist:str, ctx:ApplicationContext) -> Union[Tuple[str, Optional[str]], int]:
+async def find_playlist(playlist:str, ctx: ApplicationContext | AutocompleteContext) -> Union[Tuple[str, Optional[str]], int]:
     """
     Find a playlist by uuid.
 
@@ -100,15 +100,24 @@ async def find_playlist(playlist:str, ctx:ApplicationContext) -> Union[Tuple[str
 
     result = Playlist.from_uuid(playlist)
 
-    if result.public is False and result.user_id != ctx.author.id:
-        await ctx.interaction.edit_original_response(embed=ErrorEmbed(
-            title="此歌單是非公開的!"
-        ))
-    elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.author.id:
-        return result.name, result.user_id
+    if isinstance(ctx, ApplicationContext): 
+        if result.public is False and result.user_id != ctx.author.id:
+            await ctx.interaction.edit_original_response(embed=ErrorEmbed(
+                title="此歌單是非公開的!"
+            ))
+        elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.author.id:
+            return result.name, result.user_id
+        else:
+            return result.name, result.user_id
     else:
-        return result.name, result.user_id
-
+        if result.public is False and result.user_id != ctx.interaction.user.id:
+            await ctx.interaction.edit_original_response(embed=ErrorEmbed(
+                title="此歌單是非公開的!"
+            ))
+        elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.interaction.user.id:
+            return result.name, result.user_id
+        else:
+            return result.name, result.user_id
 
 async def ensure_voice(bot:Bot, should_connect: bool, interaction: Interaction = None, ctx:ApplicationContext = None) -> LavalinkVoiceClient:
     """
