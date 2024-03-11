@@ -84,6 +84,6 @@ class PlaylistModal(Modal):
             await interaction.edit_original_response(
                 embed=ErrorEmbed(
                     title="你給的連結太多了或是歌單超出限制了! (最多25個)",
-                    description=f"目前歌單中的歌曲數量: {len(data[self.name]["data"]['tracks'])}",
+                    description=f"目前歌單中的歌曲數量: {len(data[self.name]['data']['tracks'])}",
                 )
             )
