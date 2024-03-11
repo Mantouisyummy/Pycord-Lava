@@ -755,7 +755,7 @@ class Commands(Cog):
 
             playlist_info = await find_playlist(playlist=playlist, ctx=ctx)
 
-            if (playlist_info is None):
+            if playlist_info is None:
                 return playlist_info
 
             name = playlist_info[0]
@@ -861,7 +861,9 @@ class Commands(Cog):
                     name = key
                     break
 
-            result: LoadResult = await self.bot.lavalink.get_tracks(query)
+            result: LoadResult = await self.bot.lavalink.get_tracks(
+                query, check_local=True
+            )
 
             for track in result.tracks:
                 data[name]["data"]["tracks"].append(
@@ -891,7 +893,7 @@ class Commands(Cog):
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
             await ctx.interaction.edit_original_response(
-                embed=SuccessEmbed(title=f"添加 `{track.title}` 成功!")
+                embed=SuccessEmbed(title=f"添加成功!")
             )
 
     @playlist.command(name="remove", description="移除歌曲至指定的歌單")
@@ -989,9 +991,9 @@ class Commands(Cog):
 
             result = await find_playlist(playlist=playlist, ctx=ctx)
 
-            if (result is None):
+            if result is None:
                 return result
-            
+
             name = result[0]
             user_id = result[1]
 
@@ -1085,7 +1087,7 @@ class Commands(Cog):
 
         result = await find_playlist(playlist=playlist, ctx=ctx)
 
-        if (result is None):
+        if result is None:
             return result
         else:
             name = result[0]
@@ -1141,7 +1143,9 @@ class Commands(Cog):
 
                 pages: list[InfoEmbed] = []
 
-                for iteration, songs_in_page in enumerate(split_list(results.tracks, 10)):
+                for iteration, songs_in_page in enumerate(
+                    split_list(results.tracks, 10)
+                ):
                     pages.append(
                         InfoEmbed(
                             title=f"{name} - 歌單資訊 by {self.bot.get_user(int(user_id)).name}",
@@ -1156,6 +1160,7 @@ class Commands(Cog):
                 await ctx.interaction.edit_original_response(
                     embed=pages[0], view=Paginator(pages, ctx.author.id, None)
                 )
+
 
 def setup(bot):
     bot.add_cog(Commands(bot))
