@@ -271,7 +271,7 @@ class Commands(Cog):
                 "No results found with lavalink for query %s, checking local sources",
                 query,
             )
-            results: LoadResult = await player.node.get_tracks(query, check_local=True)
+            results: LoadResult = await self.bot.lavalink.get_local_tracks(query)
 
         if not results or not results.tracks:  # If nothing was found
             return await ctx.interaction.edit_original_response(
