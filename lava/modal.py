@@ -33,7 +33,7 @@ class PlaylistModal(Modal):
         if (
             not len(self.children[0].value.split("\n")) > 25
             and not (
-                len(data[self.name]["tracks"]) + len(self.children[0].value.split("\n"))
+                len(data[self.name]["data"]["tracks"]) + len(self.children[0].value.split("\n"))
             )
             > 25
         ):
@@ -42,7 +42,7 @@ class PlaylistModal(Modal):
             )
 
             for query in self.children[0].value.split("\n"):
-                result = await self.bot.lavalink.get_tracks(query)
+                result = await self.bot.lavalink.get_tracks(query, check_local=True)
                 for track in result.tracks:
                     data[self.name]["data"]["tracks"].append(
                         {
@@ -70,7 +70,7 @@ class PlaylistModal(Modal):
                     self.name = name
                     break
 
-            data[self.name]["tracks"] = data[self.name]["tracks"]
+            data[self.name]["data"]["tracks"] = data[self.name]["data"]["tracks"]
 
             with open(
                 f"./playlist/{interaction.user.id}.json", "w", encoding="utf-8"
@@ -84,6 +84,6 @@ class PlaylistModal(Modal):
             await interaction.edit_original_response(
                 embed=ErrorEmbed(
                     title="你給的連結太多了或是歌單超出限制了! (最多25個)",
-                    description=f"目前歌單中的歌曲數量: {len(data[self.name]['tracks'])}",
+                    description=f"目前歌單中的歌曲數量: {len(data[self.name]["data"]['tracks'])}",
                 )
             )
