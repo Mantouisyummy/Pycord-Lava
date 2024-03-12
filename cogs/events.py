@@ -1,7 +1,6 @@
 from logging import getLogger
 from typing import Union
 
-import lavalink
 from discord import TextChannel, Thread, InteractionResponded, ApplicationContext, \
     Interaction
 from discord.abc import GuildChannel
@@ -24,7 +23,9 @@ class Events(Cog):
     async def cog_load(self):
         await self.bot.wait_until_ready()
 
-        lavalink.add_event_hook(self.track_hook)
+    @commands.Cog.listener(name="on_ready")
+    async def on_ready(self):
+        self.bot.lavalink.add_event_hook(self.track_hook)
 
     async def track_hook(self, event):
         if isinstance(event, PlayerUpdateEvent):
@@ -32,14 +33,12 @@ class Events(Cog):
 
             self.logger.debug("Received player update event for guild %s", self.bot.get_guild(player.guild_id))
 
-            if event.player.fetch("autoplay") and len(event.player.queue) == 0:
+            if event.player.fetch("autoplay") and len(event.player.queue) <= 5:
                 self.logger.info(
-                    "Queue is under 10, adding recommended track for guild %s...", self.bot.get_guild(player.guild_id)
+                    "Queue is empty, adding recommended track for guild %s...", self.bot.get_guild(player.guild_id)
                 )
 
-                recommendations = await get_recommended_tracks(
-                    Variables.SPOTIFY_CLIENT, event.player, ([event.player.current] + event.player.queue)[-10:], 20
-                )
+                recommendations = await get_recommended_tracks(player, player.current, 5 - len(player.queue))
 
                 for track in recommendations:
                     event.player.add(requester=0, track=track)
