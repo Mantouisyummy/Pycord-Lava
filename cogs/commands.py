@@ -13,7 +13,6 @@ from discord import (
     AutocompleteContext,
     OptionChoice,
 )
-from discord.commands import option
 from discord.ext.commands import Cog
 from discord.ui import Button, View
 from discord.errors import NotFound
@@ -42,6 +41,7 @@ from lava.utils import (
     get_upstream_url,
     get_current_branch,
     find_playlist,
+    format_time
 )
 from lava.view import View
 from lava.paginator import Paginator
@@ -1117,7 +1117,7 @@ class Commands(Cog):
                                 title=f"{name} - 歌單資訊",
                                 description="\n".join(
                                     [
-                                        f"**[{index + 1 + (iteration * 10)}]** {track.title}"
+                                        f"**[{index + 1 + (iteration * 10)}]** [{track.title}]({track.uri}) ({format_time(track.duration)}) by {track.author}"
                                         for index, track in enumerate(songs_in_page)
                                     ]
                                 ),
