@@ -1,17 +1,13 @@
 import asyncio
 import subprocess
-import uuid
-import glob
-import json
 
-from os import path
-from typing import Union, Iterable, Optional, Tuple
+from typing import Union, Iterable, Optional, Tuple, List
 
 from discord import ApplicationContext, Message, Thread, TextChannel, Embed, NotFound, Colour, ButtonStyle, Interaction, AutocompleteContext
 from discord.abc import GuildChannel
 from discord.ui import Button
 from discord.utils import get
-from lavalink import DefaultPlayer, parse_time, DeferredAudioTrack, LoadResult
+from lavalink import DefaultPlayer, parse_time, DeferredAudioTrack, LoadResult, AudioTrack
 from spotipy import Spotify
 
 from lava.bot import Bot
@@ -75,7 +71,7 @@ def bytes_to_gb(bytes_: int) -> float:
     return bytes_ / 1024 ** 3
 
 
-def split_list(input_list, chunk_size) -> Iterable[list]:
+def split_list(input_list, chunk_size) -> Iterable[List[AudioTrack]]:
     length = len(input_list)
 
     num_sublists = length // chunk_size
@@ -472,6 +468,9 @@ def format_time(time: Union[float, int]) -> str:
 
     days, hours, minutes, seconds = map(round, (days, hours, minutes, seconds))
 
+    if hours == 0:
+        return f"{str(minutes).zfill(2)}:{str(seconds).zfill(2)}"
+    
     return f"{str(hours).zfill(2)}:{str(minutes).zfill(2)}:{str(seconds).zfill(2)}"
 
 
