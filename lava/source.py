@@ -67,13 +67,17 @@ class SpotifySource(BaseSource):
     def __init__(self):
         super().__init__()
 
+
         self.priority = 5
 
         spotify_client_id = getenv("SPOTIFY_CLIENT_ID")
         spotify_client_secret = getenv("SPOTIFY_CLIENT_SECRET")
 
         credentials = SpotifyClientCredentials(
+
+        credentials = SpotifyClientCredentials(
             client_id=spotify_client_id,
+            client_secret=spotify_client_secret
             client_secret=spotify_client_secret
         )
 
@@ -133,6 +137,7 @@ class SpotifySource(BaseSource):
                 requester=0
             )
         return None
+
 
     def __load_playlist(self, url: str) -> Tuple[list[SpotifyAudioTrack], Union[PlaylistInfo, None]]:
         """
@@ -416,12 +421,15 @@ class YTDLSource(BaseSource):
         )
 
 
+
 class SourceManager(Source):
     def __init__(self):
+        super().__init__(name='LavaSourceManager')
         super().__init__(name='LavaSourceManager')
 
         self.sources: list[BaseSource] = []
 
+        self.logger = getLogger('lava.sources')
         self.logger = getLogger('lava.sources')
 
         self.initial_sources()
@@ -444,6 +452,7 @@ class SourceManager(Source):
 
             if not source.check_query(query):
                 self.logger.debug("Source %s does not match query %s, skipping...", source.__class__.__name__, query)
+                self.logger.debug("Source %s does not match query %s, skipping...", source.__class__.__name__, query)
 
                 continue
 
@@ -453,3 +462,4 @@ class SourceManager(Source):
 
         self.logger.info("No sources matched query %s, returning None", query)
         return None
+

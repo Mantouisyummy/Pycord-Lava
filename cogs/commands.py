@@ -54,6 +54,7 @@ allowed_filters = {
     "lowpass": LowPass,
     "rotation": Rotation,
     "equalizer": Equalizer,
+    "equalizer": Equalizer,
 }
 
 
@@ -65,6 +66,11 @@ class Commands(Cog):
     playlist = discord.SlashCommandGroup("playlist", "歌單")
 
     async def search(self, ctx: AutocompleteContext):
+        query = ctx.options["query"]
+        if re.match(
+            r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+            query,
+        ):
         query = ctx.options["query"]
         if re.match(
             r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
@@ -90,9 +96,13 @@ class Commands(Cog):
 
     async def playlist_search(self, ctx: AutocompleteContext):
         playlist = ctx.options["playlist"]
+        playlist = ctx.options["playlist"]
 
         choices = []
 
+        with open(
+            f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
+        ) as f:
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
         ) as f:
@@ -102,8 +112,12 @@ class Commands(Cog):
             value = uuid.uuid5(
                 uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + name
             ).hex
+            value = uuid.uuid5(
+                uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + name
+            ).hex
             choices.append(
                 OptionChoice(
+                    name=name + f" ({len(data[name]['data']['tracks'])}首)", value=value
                     name=name + f" ({len(data[name]['data']['tracks'])}首)", value=value
                 )
             )
@@ -111,9 +125,12 @@ class Commands(Cog):
         if not playlist:
             return choices
 
+
         return choices
 
+
     async def global_playlist_search(self, ctx: AutocompleteContext):
+        playlist = ctx.options["playlist"]
         playlist = ctx.options["playlist"]
 
         choices = []
@@ -123,8 +140,15 @@ class Commands(Cog):
                 with open(
                     f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
                 ) as f:
+                with open(
+                    f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
+                ) as f:
                     data = json.load(f)
                 for title in data.keys():
+                    value = uuid.uuid5(
+                        uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + title
+                    ).hex
+                    choices.append(OptionChoice(name=title, value=value))
                     value = uuid.uuid5(
                         uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + title
                     ).hex
@@ -135,17 +159,25 @@ class Commands(Cog):
                 return []
         try:
             title, id = await find_playlist(playlist=playlist, ctx=ctx)
+        try:
+            title, id = await find_playlist(playlist=playlist, ctx=ctx)
             value = uuid.uuid5(uuid.NAMESPACE_DNS, str(id) + title).hex
 
+            choices.append(OptionChoice(name=title, value=value))
             choices.append(OptionChoice(name=title, value=value))
 
             return choices
 
+
         except (NotFound, TypeError) as e:
+            choices.append(OptionChoice(name="此歌單為非公開!", value=playlist))
             choices.append(OptionChoice(name="此歌單為非公開!", value=playlist))
             return choices
 
+
     async def songs_search(self, ctx: AutocompleteContext):
+        playlist = ctx.options["playlist"]
+        song = ctx.options["song"]
         playlist = ctx.options["playlist"]
         song = ctx.options["song"]
 
@@ -158,7 +190,14 @@ class Commands(Cog):
             with open(f"./playlist/{ctx.interaction.user.id}.json") as f:
                 data = json.load(f)
 
+
             for key in data.keys():
+                if (
+                    uuid.uuid5(
+                        uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + key
+                    ).hex
+                    == playlist
+                ):
                 if (
                     uuid.uuid5(
                         uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + key
@@ -172,6 +211,7 @@ class Commands(Cog):
 
             for track in result.tracks:
                 choices.append(OptionChoice(name=track.title, value=track.position))
+                choices.append(OptionChoice(name=track.title, value=track.position))
         else:
             return []
 
@@ -181,12 +221,16 @@ class Commands(Cog):
         return choices
 
     @music.command(name="info", description="顯示機器人資訊")
+
+    @music.command(name="info", description="顯示機器人資訊")
     async def info(self, ctx: ApplicationContext):
         embed = Embed(title="機器人資訊", color=0x2B2D31)
 
         embed.add_field(
             name="啟動時間",
+            name="啟動時間",
             value=f"<t:{round(Process(getpid()).create_time())}:F>",
+            inline=True,
             inline=True,
         )
 
@@ -195,16 +239,22 @@ class Commands(Cog):
 
         embed.add_field(
             name="版本資訊",
+            name="版本資訊",
             value=f"{get_commit_hash()} on {branch} from {upstream_url}",
         )
 
         embed.add_field(name="​", value="​", inline=True)
 
         embed.add_field(name="CPU", value=f"{cpu_percent()}%", inline=True)
+        embed.add_field(name="CPU", value=f"{cpu_percent()}%", inline=True)
 
         embed.add_field(
             name="RAM",
+            name="RAM",
             value=f"{round(bytes_to_gb(virtual_memory()[3]), 1)} GB / "
+            f"{round(bytes_to_gb(virtual_memory()[0]), 1)} GB "
+            f"({virtual_memory()[2]}%)",
+            inline=True,
             f"{round(bytes_to_gb(virtual_memory()[0]), 1)} GB "
             f"({virtual_memory()[2]}%)",
             inline=True,
@@ -213,17 +263,22 @@ class Commands(Cog):
         embed.add_field(name="​", value="​", inline=True)
 
         embed.add_field(name="伺服器數量", value=len(self.bot.guilds), inline=True)
+        embed.add_field(name="伺服器數量", value=len(self.bot.guilds), inline=True)
 
         embed.add_field(
             name="播放器數量",
+            name="播放器數量",
             value=len(self.bot.lavalink.player_manager.players),
+            inline=True,
             inline=True,
         )
 
         embed.add_field(name="​", value="​", inline=True)
 
         await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
+    @music.command(name="nowplaying", description="顯示目前正在播放的歌曲")
     @music.command(name="nowplaying", description="顯示目前正在播放的歌曲")
     async def nowplaying(self, ctx: ApplicationContext):
         await ctx.response.defer()
@@ -268,6 +323,11 @@ class Commands(Cog):
                 query,
             )
             results: LoadResult = await self.bot.lavalink.get_local_tracks(query)
+            self.bot.logger.info(
+                "No results found with lavalink for query %s, checking local sources",
+                query,
+            )
+            results: LoadResult = await self.bot.lavalink.get_local_tracks(query)
 
         if not results or not results.tracks:  # If nothing was found
             return await ctx.interaction.edit_original_response(
@@ -298,10 +358,13 @@ class Commands(Cog):
             case LoadType.TRACK:
                 player.add(
                     requester=ctx.author.id, track=results.tracks[0], index=index
+                    requester=ctx.author.id, track=results.tracks[0], index=index
                 )
 
                 # noinspection PyTypeChecker
                 await ctx.interaction.edit_original_response(
+                    embeds=[SuccessEmbed("已加入播放序列", {results.tracks[0].title})]
+                    + filter_warnings
                     embeds=[SuccessEmbed("已加入播放序列", {results.tracks[0].title})]
                     + filter_warnings
                 )
@@ -312,11 +375,30 @@ class Commands(Cog):
                 for iter_index, track in enumerate(results.tracks):
                     player.add(
                         requester=ctx.author.id, track=track, index=index + iter_index
+                        requester=ctx.author.id, track=track, index=index + iter_index
                     )
 
                 # noinspection PyTypeChecker
                 await ctx.interaction.edit_original_response(
                     embeds=[
+                        SuccessEmbed(
+                            title=f"'已加入播放序列' {len(results.tracks)} / {results.playlist_info.name}",
+                            description=(
+                                "\n".join(
+                                    [
+                                        f"**[{index + 1}]** {track.title}"
+                                        for index, track in enumerate(
+                                            results.tracks[:10]
+                                        )
+                                    ]
+                                )
+                                + "..."
+                                if len(results.tracks) > 10
+                                else ""
+                            ),
+                        )
+                    ]
+                    + filter_warnings
                         SuccessEmbed(
                             title=f"'已加入播放序列' {len(results.tracks)} / {results.playlist_info.name}",
                             description=(
@@ -376,13 +458,21 @@ class Commands(Cog):
 
             else:
                 player.queue = player.queue[target - 1 :]
+                player.queue = player.queue[target - 1 :]
 
         await player.skip()
 
         await ctx.interaction.edit_original_response(embed=SuccessEmbed("已跳過歌曲"))
+        await ctx.interaction.edit_original_response(embed=SuccessEmbed("已跳過歌曲"))
 
         await player.update_display(await ctx.interaction.original_response(), delay=5)
 
+    @music.command(name="remove", description="移除歌曲")
+    async def remove(
+        self,
+        ctx: ApplicationContext,
+        target: Option(int, "要移除的歌曲編號", name="target", required=True),
+    ):
     @music.command(name="remove", description="移除歌曲")
     async def remove(
         self,
@@ -403,9 +493,11 @@ class Commands(Cog):
         player.queue.pop(target - 1)
 
         await ctx.interaction.edit_original_response(embed=SuccessEmbed("已移除歌曲"))
+        await ctx.interaction.edit_original_response(embed=SuccessEmbed("已移除歌曲"))
 
         await player.update_display(await ctx.interaction.original_response(), delay=5)
 
+    @music.command(name="clean", description="清除播放序列")
     @music.command(name="clean", description="清除播放序列")
     async def clean(self, ctx: ApplicationContext):
         await ctx.response.defer()
@@ -420,6 +512,7 @@ class Commands(Cog):
 
         await player.update_display(await ctx.interaction.original_response(), delay=5)
 
+    @music.command(name="pause", description="暫停當前播放的歌曲")
     @music.command(name="pause", description="暫停當前播放的歌曲")
     async def pause(self, ctx: ApplicationContext):
         await ctx.response.defer()
@@ -436,7 +529,9 @@ class Commands(Cog):
         await player.set_pause(True)
 
         await ctx.interaction.edit_original_response(embed=SuccessEmbed("已暫停歌曲"))
+        await ctx.interaction.edit_original_response(embed=SuccessEmbed("已暫停歌曲"))
 
+    @music.command(name="resume", description="恢復當前播放的歌曲")
     @music.command(name="resume", description="恢復當前播放的歌曲")
     async def resume(self, ctx: ApplicationContext):
         await ctx.response.defer()
@@ -453,9 +548,11 @@ class Commands(Cog):
         await player.set_pause(False)
 
         await ctx.interaction.edit_original_response(embed=SuccessEmbed("已繼續歌曲"))
+        await ctx.interaction.edit_original_response(embed=SuccessEmbed("已繼續歌曲"))
 
         await player.update_display(await ctx.interaction.original_response(), delay=5)
 
+    @music.command(name="stop", description="停止播放並清空播放序列")
     @music.command(name="stop", description="停止播放並清空播放序列")
     async def stop(self, ctx: ApplicationContext):
         await ctx.response.defer()
@@ -469,6 +566,7 @@ class Commands(Cog):
 
         await player.update_display(await ctx.interaction.original_response())
 
+    @music.command(name="connect", description="連接至你當前的語音頻道")
     @music.command(name="connect", description="連接至你當前的語音頻道")
     async def connect(self, ctx: ApplicationContext):
         await ctx.response.defer()
@@ -487,12 +585,19 @@ class Commands(Cog):
                     label=str("繼續"), style=ButtonStyle.green, custom_id="continue"
                 )
             )
+            view.add_item(
+                item=Button(
+                    label=str("繼續"), style=ButtonStyle.green, custom_id="continue"
+                )
+            )
 
             await ctx.interaction.edit_original_response(
                 embed=WarningEmbed(
                     "警告",
                     "機器人已經在一個頻道中了，繼續移動將會中斷對方的音樂播放，是否要繼續?",
+                    "機器人已經在一個頻道中了，繼續移動將會中斷對方的音樂播放，是否要繼續?",
                 ),
+                view=view,
                 view=view,
             )
 
@@ -502,10 +607,14 @@ class Commands(Cog):
                     check=lambda i: i.data["custom_id"] == "continue"
                     and i.user.id == ctx.user.id,
                     timeout=10,
+                    check=lambda i: i.data["custom_id"] == "continue"
+                    and i.user.id == ctx.user.id,
+                    timeout=10,
                 )
 
             except TimeoutError:
                 await ctx.interaction.edit_original_response(
+                    embed=ErrorEmbed("已取消"), view=None
                     embed=ErrorEmbed("已取消"), view=None
                 )
                 return
@@ -519,6 +628,7 @@ class Commands(Cog):
 
             await ctx.interaction.edit_original_response(
                 embed=SuccessEmbed("已連接至語音頻道"), view=None
+                embed=SuccessEmbed("已連接至語音頻道"), view=None
             )
 
         finally:
@@ -527,6 +637,7 @@ class Commands(Cog):
                 delay=5,
             )
 
+    @music.command(name="disconnect", description="斷開與語音頻道的連接")
     @music.command(name="disconnect", description="斷開與語音頻道的連接")
     async def disconnect(self, ctx: ApplicationContext):
         await ctx.response.defer()
@@ -542,6 +653,7 @@ class Commands(Cog):
 
         await player.update_display(await ctx.interaction.original_response())
 
+    @music.command(name="queue", description="顯示播放序列")
     @music.command(name="queue", description="顯示播放序列")
     async def queue(self, ctx: ApplicationContext):
         await ctx.response.defer()
@@ -562,11 +674,16 @@ class Commands(Cog):
                 InfoEmbed(
                     title="播放序列",
                     description="\n".join(
+            pages.append(
+                InfoEmbed(
+                    title="播放序列",
+                    description="\n".join(
                         [
                             f"**[{index + 1 + (iteration * 10)}]** {track.title}"
                             f" {'🔥' if not track.requester else ''}"
                             for index, track in enumerate(songs_in_page)
                         ]
+                    ),
                     ),
                 )
             )
@@ -574,7 +691,21 @@ class Commands(Cog):
         await ctx.interaction.edit_original_response(
             embed=pages[0], view=Paginator(pages, ctx.author.id, None)
         )
+        await ctx.interaction.edit_original_response(
+            embed=pages[0], view=Paginator(pages, ctx.author.id, None)
+        )
 
+    @music.command(name="repeat", description="更改重複播放模式")
+    async def repeat(
+        self,
+        ctx: ApplicationContext,
+        mode: Option(
+            name="mode",
+            description="重複播放模式",
+            choices=[
+                OptionChoice(name="關閉", value=f"{'關閉'}/0"),
+                OptionChoice(name="單曲", value=f"{'單曲'} 單曲/1"),
+                OptionChoice(name="整個序列", value=f"{'整個序列'} 整個序列/2"),
     @music.command(name="repeat", description="更改重複播放模式")
     async def repeat(
         self,
@@ -598,10 +729,12 @@ class Commands(Cog):
 
         await ctx.response.send_message(
             embed=SuccessEmbed(f"{'成功將重複播放模式更改為'}: {mode.split('/')[0]}")
+            embed=SuccessEmbed(f"{'成功將重複播放模式更改為'}: {mode.split('/')[0]}")
         )
 
         await player.update_display(await ctx.interaction.original_response(), delay=5)
 
+    @music.command(name="shuffle", description="切換隨機播放模式")
     @music.command(name="shuffle", description="切換隨機播放模式")
     async def shuffle(self, ctx: ApplicationContext):
         await ctx.response.defer()
@@ -791,13 +924,31 @@ class Commands(Cog):
                         },
                     },
                 )
+                data = (
+                    {
+                        name: {
+                            "public": public,
+                            "loadType": "playlist",
+                            "data": {
+                                "info": {"name": name, "selectedTrack": -1},
+                                "pluginInfo": {},
+                                "tracks": [],
+                            },
+                        },
+                    },
+                )
 
+                with open(
+                    f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8"
+                ) as f:
                 with open(
                     f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8"
                 ) as f:
                     json.dump(data, f, indent=4, ensure_ascii=False)
             else:
                 return await ctx.interaction.edit_original_response(
+                    embed=ErrorEmbed(f"你已經有同名的歌單了!")
+                )
                     embed=ErrorEmbed(f"你已經有同名的歌單了!")
                 )
         else:
@@ -819,11 +970,51 @@ class Commands(Cog):
                         ensure_ascii=False,
                     )
                 )
+                f.write(
+                    json.dumps(
+                        {
+                            name: {
+                                "public": public,
+                                "loadType": "playlist",
+                                "data": {
+                                    "info": {"name": name, "selectedTrack": -1},
+                                    "pluginInfo": {},
+                                    "tracks": [],
+                                },
+                            },
+                        },
+                        indent=4,
+                        ensure_ascii=False,
+                    )
+                )
 
         await ctx.interaction.edit_original_response(
             embed=SuccessEmbed(f"建立成功! 名稱為: `{name}`")
+            embed=SuccessEmbed(f"建立成功! 名稱為: `{name}`")
         )
 
+    @playlist.command(name="public", description="切換歌單的公開狀態")
+    async def public(
+        self,
+        ctx: ApplicationContext,
+        playlist: Option(
+            str,
+            "清單名稱",
+            name="playlist",
+            required=True,
+            autocomplete=playlist_search,
+        ),
+        public: Option(
+            bool,
+            "是否公開",
+            name="public",
+            choices=[
+                OptionChoice(name="True", value=True),
+                OptionChoice(name="False", value=False),
+            ],
+            required=True,
+        ),
+    ):
     @playlist.command(name="public", description="切換歌單的公開狀態")
     async def public(
         self,
@@ -858,10 +1049,17 @@ class Commands(Cog):
                 return playlist_info
 
             name = playlist_info[0]
+            playlist_info = await find_playlist(playlist=playlist, ctx=ctx)
+
+            if playlist_info is None:
+                return playlist_info
+
+            name = playlist_info[0]
 
             data[name]["public"] = public
 
             with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
                 json.dump(data, f, indent=4, ensure_ascii=False)
         else:
             await ctx.interaction.edit_original_response(embed=ErrorEmbed(f"你沒有播放清單!"))
@@ -883,8 +1081,24 @@ class Commands(Cog):
         ),
         newname: Option(str, "新名稱", name="name", required=True),
     ):
+    @playlist.command(name="rename", description="重命名一個歌單")
+    async def rename(
+        self,
+        ctx: ApplicationContext,
+        playlist: Option(
+            str,
+            "清單名稱",
+            name="playlist",
+            autocomplete=playlist_search,
+            required=True,
+        ),
+        newname: Option(str, "新名稱", name="name", required=True),
+    ):
         await ctx.response.defer()
 
+        await ctx.interaction.edit_original_response(
+            embed=LoadingEmbed(title="正在讀取中...")
+        )
         await ctx.interaction.edit_original_response(
             embed=LoadingEmbed(title="正在讀取中...")
         )
@@ -899,6 +1113,7 @@ class Commands(Cog):
         else:
             return await ctx.interaction.edit_original_response(
                 embed=ErrorEmbed(f"這不是你的播放清單!")
+                embed=ErrorEmbed(f"這不是你的播放清單!")
             )
 
         data[newname] = data.pop(name)
@@ -907,6 +1122,7 @@ class Commands(Cog):
             json.dump(data, f, indent=4, ensure_ascii=False)
 
         await ctx.interaction.edit_original_response(
+            embed=SuccessEmbed(f"更名成功! 新的名字為 `{newname}`")
             embed=SuccessEmbed(f"更名成功! 新的名字為 `{newname}`")
         )
 
@@ -934,6 +1150,11 @@ class Commands(Cog):
                 ctx=ctx,
             )
 
+            name, user_id = await find_playlist(
+                playlist=playlist,
+                ctx=ctx,
+            )
+
             modal = PlaylistModal(title="加入歌曲", name=name, bot=self.bot)
             await ctx.send_modal(modal)
 
@@ -943,11 +1164,19 @@ class Commands(Cog):
             await ctx.interaction.edit_original_response(
                 embed=LoadingEmbed(title="正在讀取中...")
             )
+            await ctx.interaction.edit_original_response(
+                embed=LoadingEmbed(title="正在讀取中...")
+            )
 
             with open(f"./playlist/{ctx.user.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
+
             for key in data.keys():
+                if (
+                    uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.user.id) + key).hex
+                    == playlist
+                ):
                 if (
                     uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.user.id) + key).hex
                     == playlist
@@ -955,6 +1184,9 @@ class Commands(Cog):
                     name = key
                     break
 
+            result: LoadResult = await self.bot.lavalink.get_tracks(
+                query, check_local=True
+            )
             result: LoadResult = await self.bot.lavalink.get_tracks(
                 query, check_local=True
             )
@@ -980,11 +1212,36 @@ class Commands(Cog):
                         "userData": track.user_data,
                     },
                 )
+                data[name]["data"]["tracks"].append(
+                    {
+                        "encoded": track.track,
+                        "info": {
+                            "identifier": track.identifier,
+                            "isSeekable": track.is_seekable,
+                            "author": track.author,
+                            "length": track.duration,
+                            "isStream": track.is_stream,
+                            "position": track.position,
+                            "title": track.title,
+                            "uri": track.uri,
+                            "sourceName": track.source_name,
+                            "artworkUrl": track.artwork_url,
+                            "isrc": track.isrc,
+                        },
+                        "pluginInfo": track.plugin_info,
+                        "userData": track.user_data,
+                    },
+                )
 
+            data[name]["data"]["tracks"] = data[name]["data"]["tracks"]
             data[name]["data"]["tracks"] = data[name]["data"]["tracks"]
 
             with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
+
+            await ctx.interaction.edit_original_response(
+                embed=SuccessEmbed(title=f"添加成功!")
+            )
 
             await ctx.interaction.edit_original_response(
                 embed=SuccessEmbed(title=f"添加成功!")
@@ -1004,7 +1261,13 @@ class Commands(Cog):
         await ctx.interaction.edit_original_response(
             embed=LoadingEmbed(title="正在讀取中...")
         )
+        await ctx.interaction.edit_original_response(
+            embed=LoadingEmbed(title="正在讀取中...")
+        )
 
+        with open(
+            f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
+        ) as f:
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
         ) as f:
@@ -1015,17 +1278,36 @@ class Commands(Cog):
             ctx=ctx,
         )
 
+        name, user_id = await find_playlist(
+            playlist=playlist,
+            ctx=ctx,
+        )
+
+        del data[name]["data"]["tracks"][song]
         del data[name]["data"]["tracks"][song]
 
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8"
         ) as f:
+        with open(
+            f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8"
+        ) as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
+
 
         await ctx.interaction.edit_original_response(
             embed=SuccessEmbed(title="成功從歌單移除歌曲")
+            embed=SuccessEmbed(title="成功從歌單移除歌曲")
         )
 
+    @playlist.command(name="delete", description="移除指定的歌單")
+    async def delete(
+        self,
+        ctx: ApplicationContext,
+        playlist: Option(
+            str, "歌單", name="playlist", required=True, autocomplete=playlist_search
+        ),
+    ):
     @playlist.command(name="delete", description="移除指定的歌單")
     async def delete(
         self,
@@ -1039,8 +1321,14 @@ class Commands(Cog):
         await ctx.interaction.edit_original_response(
             embed=LoadingEmbed(title="正在讀取中...")
         )
+        await ctx.interaction.edit_original_response(
+            embed=LoadingEmbed(title="正在讀取中...")
+        )
 
         name = ""
+        with open(
+            f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
+        ) as f:
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
         ) as f:
@@ -1051,8 +1339,16 @@ class Commands(Cog):
             ctx=ctx,
         )
 
+        name, user_id = await find_playlist(
+            playlist=playlist,
+            ctx=ctx,
+        )
+
         del data[name]
 
+        with open(
+            f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8"
+        ) as f:
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8"
         ) as f:
@@ -1089,7 +1385,22 @@ class Commands(Cog):
 
             with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
+            await ctx.interaction.edit_original_response(
+                embed=LoadingEmbed(title="正在讀取中...")
+            )
 
+            result = await find_playlist(playlist=playlist, ctx=ctx)
+
+            if result is None:
+                return result
+
+            name = result[0]
+            user_id = result[1]
+
+            with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            if not data[name]["data"]["tracks"]:
             if not data[name]["data"]["tracks"]:
                 return await ctx.interaction.edit_original_response(
                     embed=InfoEmbed("歌單", "歌單中沒有歌曲")
@@ -1099,6 +1410,24 @@ class Commands(Cog):
 
             player: LavaPlayer = self.bot.lavalink.player_manager.get(ctx.guild.id)
 
+            filter_warnings = (
+                [
+                    InfoEmbed(
+                        title="提醒",
+                        description=str(
+                            "偵測到 效果器正在運作中，\n"
+                            "這可能會造成音樂聲音有變形(加速、升高等)的情形產生，\n"
+                            "如果這不是你期望的，可以透過效果器的指令來關閉它們\n"
+                            "指令名稱通常等於效果器名稱，例如 `/timescale` 就是控制 Timescale 效果器\n\n"
+                            "以下是正在運行的效果器："
+                        ),
+                    )
+                    + " "
+                    + ", ".join([key.capitalize() for key in player.filters])
+                ]
+                if player.filters
+                else []
+            )
             filter_warnings = (
                 [
                     InfoEmbed(
@@ -1128,6 +1457,8 @@ class Commands(Cog):
                 player.add(
                     requester=ctx.author.id, track=track, index=index + iter_index
                 )
+                    requester=ctx.author.id, track=track, index=index + iter_index
+                )
 
             await ctx.interaction.edit_original_response(
                 embeds=[
@@ -1144,7 +1475,20 @@ class Commands(Cog):
                             if len(results.tracks) > 10
                             else ""
                         ),
+                        description=(
+                            "\n".join(
+                                [
+                                    f"**[{index + 1}]** {track.title}"
+                                    for index, track in enumerate(results.tracks[:10])
+                                ]
+                            )
+                            + "..."
+                            if len(results.tracks) > 10
+                            else ""
+                        ),
                     )
+                ]
+                + filter_warnings
                 ]
                 + filter_warnings
             )
@@ -1157,6 +1501,7 @@ class Commands(Cog):
                 await ctx.interaction.original_response(), delay=5
             )
 
+        except TypeError as e:
         except TypeError as e:
             pass
 
@@ -1188,14 +1533,34 @@ class Commands(Cog):
                         f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8"
                     ) as f:
                         data = json.load(f)
+        result = await find_playlist(playlist=playlist, ctx=ctx)
 
+        if result is None:
+            return result
+        else:
+            name = result[0]
+            user_id = result[1]
+
+            if ctx.author.id == user_id:
+                try:
+                    with open(
+                        f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8"
+                    ) as f:
+                        data = json.load(f)
+
+                    if not data[name]["data"]["tracks"]:
+                        return await ctx.interaction.edit_original_response(
+                            embed=InfoEmbed("歌單", "歌單中沒有歌曲")
+                        )
                     if not data[name]["data"]["tracks"]:
                         return await ctx.interaction.edit_original_response(
                             embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                         )
 
                     results = LoadResult.from_dict(data[name])
+                    results = LoadResult.from_dict(data[name])
 
+                    pages: list[InfoEmbed] = []
                     pages: list[InfoEmbed] = []
 
                     for iteration, songs_in_page in enumerate(
@@ -1221,16 +1586,41 @@ class Commands(Cog):
                 name, user_id = await find_playlist(playlist=playlist, ctx=ctx)
 
                 with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
+                with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
 
                 if not data[name]["data"]["tracks"]:
                     return await ctx.interaction.edit_original_response(
                         embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                     )
+                if not data[name]["data"]["tracks"]:
+                    return await ctx.interaction.edit_original_response(
+                        embed=InfoEmbed("歌單", "歌單中沒有歌曲")
+                    )
 
+                results = LoadResult.from_dict(data[name])
                 results = LoadResult.from_dict(data[name])
 
                 pages: list[InfoEmbed] = []
+                pages: list[InfoEmbed] = []
+
+                for iteration, songs_in_page in enumerate(
+                    split_list(results.tracks, 10)
+                ):
+                    pages.append(
+                        InfoEmbed(
+                            title=f"{name} - 歌單資訊 by {self.bot.get_user(int(user_id)).name}",
+                            description="\n".join(
+                                [
+                                    f"**[{index + 1 + (iteration * 10)}]** {track.title}"
+                                    for index, track in enumerate(songs_in_page)
+                                ]
+                            ),
+                        ).set_footer(text=f"ID: {playlist}")
+                    )
+                await ctx.interaction.edit_original_response(
+                    embed=pages[0], view=Paginator(pages, ctx.author.id, None)
+                )
 
                 for iteration, songs_in_page in enumerate(
                     split_list(results.tracks, 10)

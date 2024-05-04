@@ -1,7 +1,6 @@
 from logging import getLogger
 from typing import Union
 
-import lavalink
 from discord import TextChannel, Thread, InteractionResponded, ApplicationContext, \
     Interaction
 from discord.abc import GuildChannel

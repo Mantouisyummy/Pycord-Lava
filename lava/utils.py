@@ -14,6 +14,7 @@ from lava.classes.voice_client import LavalinkVoiceClient
 from lava.errors import UserNotInVoice, BotNotInVoice, MissingVoicePermissions, UserInDifferentChannel
 from lava.embeds import ErrorEmbed
 from lava.playlist import Playlist
+from lava.playlist import Playlist
 
 
 if TYPE_CHECKING:
@@ -70,7 +71,7 @@ def bytes_to_gb(bytes_: int) -> float:
     return bytes_ / 1024 ** 3
 
 
-def split_list(input_list, chunk_size) -> Iterable[list]:
+def split_list(input_list, chunk_size) -> Iterable[List[AudioTrack]]:
     length = len(input_list)
 
     num_sublists = length // chunk_size
@@ -90,7 +91,20 @@ async def find_playlist(playlist:str, ctx: ApplicationContext | AutocompleteCont
     :param public: Flag indicating whether to search for public playlists.
     :return: A tuple containing the title and ID of the found playlist if it exists and meets the criteria,
              or -1 if the playlist doesn't exist or doesn't meet the criteria.
+             or -1 if the playlist doesn't exist or doesn't meet the criteria.
     """
+
+    result = Playlist.from_uuid(playlist)
+
+    if isinstance(ctx, ApplicationContext): 
+        if result.public is False and result.user_id != ctx.author.id:
+            await ctx.interaction.edit_original_response(embed=ErrorEmbed(
+                title="此歌單是非公開的!"
+            ))
+        elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.author.id:
+            return result.name, result.user_id
+        else:
+            return result.name, result.user_id
 
     result = Playlist.from_uuid(playlist)
 
@@ -110,7 +124,14 @@ async def find_playlist(playlist:str, ctx: ApplicationContext | AutocompleteCont
             ))
         elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.interaction.user.id:
             return result.name, result.user_id
+        if result.public is False and result.user_id != ctx.interaction.user.id:
+            await ctx.interaction.edit_original_response(embed=ErrorEmbed(
+                title="此歌單是非公開的!"
+            ))
+        elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.interaction.user.id:
+            return result.name, result.user_id
         else:
+            return result.name, result.user_id
             return result.name, result.user_id
 
 async def ensure_voice(bot, should_connect: bool, interaction: Interaction = None, ctx:ApplicationContext = None) -> LavalinkVoiceClient:
