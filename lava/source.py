@@ -1,16 +1,16 @@
-import json
 import re
 from logging import getLogger
 from os import getenv
 from typing import Union, Tuple, Optional
 
-from lavalink import Source, Client, LoadResult, LoadType, PlaylistInfo
-from spotipy import Spotify, SpotifyOAuth
-from yt_dlp import YoutubeDL, DownloadError
-from yt_dlp.utils import UnsupportedError
+import requests
+from bs4 import BeautifulSoup
+from lavalink import Source, Client, LoadResult, LoadType, PlaylistInfo, DeferredAudioTrack
+from spotipy import Spotify, SpotifyClientCredentials
+from yt_dlp import YoutubeDL
+from yt_dlp.utils import UnsupportedError, DownloadError
 
-from lava.variables import Variables
-from lava.sources.track import SpotifyAudioTrack
+from lava.errors import LoadError
 
 
 class BaseSource:
@@ -37,31 +37,47 @@ class BaseSource:
         """
         raise NotImplementedError
 
+
+class SpotifyAudioTrack(DeferredAudioTrack):
+    def __init__(self, track, requester, **extra):
+        super().__init__(track, requester, **extra)
+
+        self.track = None
+
+    async def load(self, client):  # skipcq: PYL-W0201
+        getLogger('lava.sources').info("Loading spotify track %s...", self.title)
+
+        result: LoadResult = await client.get_tracks(
+            f'ytsearch:{self.title} {self.author}'
+        )
+
+        if result.load_type != LoadType.SEARCH or not result.tracks:
+            raise LoadError
+
+        first_track = result.tracks[0]
+        base64 = first_track.track
+        self.track = base64
+
+        getLogger('lava.sources').info("Loaded spotify track %s", self.title)
+
+        return base64
+
+
 class SpotifySource(BaseSource):
     def __init__(self):
         super().__init__()
-    
+
         self.priority = 5
 
         spotify_client_id = getenv("SPOTIFY_CLIENT_ID")
         spotify_client_secret = getenv("SPOTIFY_CLIENT_SECRET")
-        spotify_redirect_uri = getenv("SPOTIFY_REDIRECT_URI")
 
-        if not (spotify_client_id and spotify_client_secret):
-            raise ValueError(
-                "One of SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REDIRECT_URI enviorment variables is missing,"
-                "Spotify links and autoplay will be disabled."
-            )
-    
-        credentials = SpotifyOAuth(
+        credentials = SpotifyClientCredentials(
             client_id=spotify_client_id,
-            client_secret=spotify_client_secret,
-            redirect_uri=spotify_redirect_uri,
-            open_browser=False
+            client_secret=spotify_client_secret
         )
 
-        Variables.SPOTIFY_CLIENT = Spotify(auth_manager=credentials)
-        Variables.SPOTIFY_CLIENT.recommendations(seed_artists=["4NHQUGzhtTLFvgF5SZesLK"])
+        self.spotify_client = Spotify(auth_manager=credentials)
 
     def check_query(self, query: str) -> bool:
         spotify_url_rx = r'^(https://open\.spotify\.com/)(track|album|playlist)/([a-zA-Z0-9]+)(.*)$'
@@ -100,7 +116,7 @@ class SpotifySource(BaseSource):
         if not track_id:
             return None
 
-        track = Variables.SPOTIFY_CLIENT.track(track_id)
+        track = self.spotify_client.track(track_id)
 
         if track:
             return SpotifyAudioTrack(
@@ -111,12 +127,13 @@ class SpotifySource(BaseSource):
                     'length': track['duration_ms'],
                     'isStream': False,
                     'title': track['name'],
-                    'uri': f"https://open.spotify.com/track/{track['id']}"
+                    'uri': f"https://open.spotify.com/track/{track['id']}",
+                    'artworkUrl': track['album']['images'][0]['url']
                 },
                 requester=0
             )
         return None
-    
+
     def __load_playlist(self, url: str) -> Tuple[list[SpotifyAudioTrack], Union[PlaylistInfo, None]]:
         """
         Get tracks in a playlist with given url from spotify, None if not found
@@ -128,7 +145,7 @@ class SpotifySource(BaseSource):
         if not playlist_id:
             return [], None
 
-        playlist = Variables.SPOTIFY_CLIENT.playlist(playlist_id)
+        playlist = self.spotify_client.playlist(playlist_id)
 
         playlist_info = PlaylistInfo(playlist['name'], -1)
 
@@ -145,7 +162,8 @@ class SpotifySource(BaseSource):
                             'length': track['track']['duration_ms'],
                             'isStream': False,
                             'title': track['track']['name'],
-                            'uri': f"https://open.spotify.com/track/{track['track']['id']}"
+                            'uri': f"https://open.spotify.com/track/{track['track']['id']}",
+                            'artworkUrl': track['track']['images'][0]['url']
                         },
                         requester=0
                     )
@@ -165,7 +183,7 @@ class SpotifySource(BaseSource):
         if not album_id:
             return [], None
 
-        album = Variables.SPOTIFY_CLIENT.album(album_id)
+        album = self.spotify_client.album(album_id)
 
         playlist_info = PlaylistInfo(album['name'], -1)
 
@@ -182,7 +200,8 @@ class SpotifySource(BaseSource):
                             'length': track['duration_ms'],
                             'isStream': False,
                             'title': track['name'],
-                            'uri': f"https://open.spotify.com/track/{track['id']}"
+                            'uri': f"https://open.spotify.com/track/{track['id']}",
+                            'artworkUrl': album['images'][0]['url']
                         },
                         requester=0
                     )
@@ -240,6 +259,114 @@ class SpotifySource(BaseSource):
 
         return None
 
+
+class BilibiliSource(BaseSource):
+    def __init__(self):
+        super().__init__()
+
+        self.priority = 5
+
+    def check_query(self, query: str) -> bool:
+        return query.startswith('https://www.bilibili.com/video/') or query.startswith('https://b23.tv/')
+
+    async def load_item(self, client: Client, query: str) -> Optional[LoadResult]:
+        audio_url, title, author = self.get_audio(query)
+
+        track = (await client.get_tracks(audio_url, check_local=False)).tracks[0]
+
+        track.title = title
+        track.author = f'{author} / [Bilibili]({query})'
+
+        return LoadResult(
+            load_type=LoadType.TRACK,
+            tracks=[track],
+            playlist_info=None
+        )
+
+    @staticmethod
+    def get_video_info(bvid: str) -> Tuple[str, str]:
+        """
+        Gets video info from a Bilibili video bvid
+
+        :param bvid: Bilibili video bvid
+        :return: Tuple of video cid, video session
+        """
+        headers = {
+            'referer': 'https://www.bilibili.com/',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36'
+        }
+        video_index_url = f"https://www.bilibili.com/video/{bvid}"
+        resp = requests.get(video_index_url, headers=headers).text
+        cid = re.findall('"cid":(\\d+),', resp)[0]
+        session = re.findall('"session":"(.*?)"', resp)[0]
+        return cid, session
+
+    def get_audio_url(self, url: str):
+        """
+        Gets audio URL from a Bilibili video URL
+
+        :param url: Bilibili video URL
+        :return: audio URL
+        """
+        headers = {
+            'referer': 'https://www.bilibili.com/',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36'
+        }
+
+        bvid = re.search(r"/video/([^/?]+)", url).group(1)
+
+        cid, session = self.get_video_info(bvid)
+
+        play_url = 'https://api.bilibili.com/x/player/playurl'
+
+        params = {
+            'cid': cid,
+            'qn': '2',
+            'type': '',
+            'otype': 'json',
+            'fourk': '1',
+            'bvid': bvid,
+            'fnver': '0',
+            'fnval': '976',
+            'session': session,
+        }
+
+        for _ in range(20):
+            json_data = requests.get(url=play_url, params=params, headers=headers).json()
+            audio_url = json_data['data']['dash']['audio'][0]['baseUrl']
+            if audio_url.startswith("https://upos-hz-mirrorakam.akamaized.net/"):
+                return audio_url
+
+    def get_audio(self, url: str) -> Tuple[str, str, str]:
+        """
+        Gets audio from a Bilibili video URL
+
+        :param url: Bilibili video URL
+        :return: Tuple of audio URL, video title, video author.
+        """
+        headers = {
+            'Connection': 'Keep-Alive',
+            'Accept-Language': 'en-US,en;q=0.8,zh-Hans-CN;q=0.5,zh-Hans;q=0.3',
+            'Accept': 'text/html, application/xhtml+xml, */*',
+            'referer': 'https://www.bilibili.com',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0',
+        }
+
+        video_html = requests.get(url, headers=headers)
+
+        values = video_html.text
+
+        text = BeautifulSoup(values, features='html.parser')
+
+        title = text.find('title').contents[0].replace(' ', ',').replace('/', ',')
+
+        author = text.select_one('div.up-detail-top a').text.replace("\n", "")
+
+        audio_url = self.get_audio_url(url)
+
+        return audio_url, title, author
+
+
 class YTDLSource(BaseSource):
     def __init__(self):
         super().__init__()
@@ -288,13 +415,14 @@ class YTDLSource(BaseSource):
             playlist_info=PlaylistInfo.none()
         )
 
+
 class SourceManager(Source):
     def __init__(self):
-        super().__init__(name='SourceManager')
+        super().__init__(name='LavaSourceManager')
 
         self.sources: list[BaseSource] = []
 
-        self.logger = getLogger('discord.sources')
+        self.logger = getLogger('lava.sources')
 
         self.initial_sources()
 
@@ -315,7 +443,7 @@ class SourceManager(Source):
             self.logger.debug("Checking source for query %s: %s", query, source.__class__.__name__)
 
             if not source.check_query(query):
-                self.logger.debug("Source %s does not match query %, skipping...", source.__class__.__name__, query)
+                self.logger.debug("Source %s does not match query %s, skipping...", source.__class__.__name__, query)
 
                 continue
 

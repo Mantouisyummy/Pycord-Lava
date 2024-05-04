@@ -3,7 +3,7 @@ import uuid
 
 from discord.ui import Modal, InputText
 from discord import InputTextStyle, Interaction
-from lavalink import LoadResult, LoadType, PlaylistInfo, AudioTrack
+from lavalink import LoadResult
 from typing import Optional
 
 from lava.bot import Bot

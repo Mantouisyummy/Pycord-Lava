@@ -7,7 +7,7 @@ from discord import Intents
 from colorlog import ColoredFormatter
 from dotenv import load_dotenv
 
-from core.bot import Bot
+from lava.bot import Bot
 from os import getenv
 
 def main():
