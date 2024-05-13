@@ -77,7 +77,7 @@ class Commands(Cog):
 
         choices = []
 
-        result = await self.bot.lavalink.get_tracks(f"ytsearch:{query}")
+        result = await self.bot.lavalink.get_tracks(f"ytmsearch:{query}")
 
         for track in result.tracks:
             choices.append(
@@ -625,9 +625,9 @@ class Commands(Cog):
     async def timescale(
         self,
         ctx: ApplicationContext,
-        speed: Option(float, name="speed", description="速度 (≥ 0.1)", required=False),
-        pitch: Option(float, name="pitch", description="音調 (≥ 0.1)", required=False),
-        rate: Option(float, name="rate", description="速率 (≥ 0.1)", required=False),
+        speed: Option(float, name="speed", description="速度 (≥ 0.1)", required=True),
+        pitch: Option(float, name="pitch", description="音調 (≥ 0.1)", required=True),
+        rate: Option(float, name="rate", description="速率 (≥ 0.1)", required=True),
     ):
         interaction = ctx.interaction
         kwargs = {"speed": speed, "pitch": pitch, "rate": rate}
@@ -638,10 +638,10 @@ class Commands(Cog):
         self,
         ctx: ApplicationContext,
         frequency: Option(
-            float, name="frequency", description="頻率 (0 < n)", required=False
+            float, name="frequency", description="頻率 (0 < n)", required=True
         ),
         depth: Option(
-            float, name="depth", description="強度 (0 < n ≤ 1)", required=False
+            float, name="depth", description="強度 (0 < n ≤ 1)", required=True
         ),
     ):
         interaction = ctx.interaction
@@ -653,10 +653,10 @@ class Commands(Cog):
         self,
         ctx: ApplicationContext,
         frequency: Option(
-            float, name="frequency", description="頻率 (0 < n)", required=False
+            float, name="frequency", description="頻率 (0 < n)", required=True
         ),
         depth: Option(
-            float, name="depth", description="強度 (0 < n ≤ 1)", required=False
+            float, name="depth", description="強度 (0 < n ≤ 1)", required=True
         ),
     ):
         interaction = ctx.interaction
@@ -671,7 +671,7 @@ class Commands(Cog):
         self,
         ctx: ApplicationContext,
         rotation_hz: Option(
-            float, name="rotation_hz", description="頻率 (0 ≤ n)", required=False
+            float, name="rotation_hz", description="頻率 (0 ≤ n)", required=True
         ),
     ):
         interaction = ctx.interaction
@@ -683,7 +683,7 @@ class Commands(Cog):
         self,
         ctx: ApplicationContext,
         smoothing: Option(
-            int, name="smoothing", description="強度 (1 < n)", required=False
+            int, name="smoothing", description="強度 (1 < n)", required=True
         ),
     ):
         interaction = ctx.interaction

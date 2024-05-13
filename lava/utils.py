@@ -14,7 +14,7 @@ from lava.classes.voice_client import LavalinkVoiceClient
 from lava.errors import UserNotInVoice, BotNotInVoice, MissingVoicePermissions, UserInDifferentChannel
 from lava.embeds import ErrorEmbed
 from lava.playlist import Playlist
-from lava.playlist import Playlist
+
 
 
 if TYPE_CHECKING:
@@ -131,7 +131,6 @@ async def find_playlist(playlist:str, ctx: ApplicationContext | AutocompleteCont
         elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.interaction.user.id:
             return result.name, result.user_id
         else:
-            return result.name, result.user_id
             return result.name, result.user_id
 
 async def ensure_voice(bot, should_connect: bool, interaction: Interaction = None, ctx:ApplicationContext = None) -> LavalinkVoiceClient:

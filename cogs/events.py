@@ -71,7 +71,7 @@ class Events(Cog):
             player.queue.clear()
 
             try:
-                await player.update_display(self.bot, player)
+                await player.update_display()
             except ValueError:  # There's no message to update
                 pass
 
