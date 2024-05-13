@@ -104,7 +104,7 @@ class Commands(Cog):
             ).hex
             choices.append(
                 OptionChoice(
-                    name=name + f" ({len(data[name]['data']['tracks'])}首)", value=value
+                    name=name + f" ({len(data[name]['tracks'])}首)", value=value
                 )
             )
 
@@ -960,7 +960,7 @@ class Commands(Cog):
             )
 
             for track in result.tracks:
-                data[name]["data"]["tracks"].append(
+                data[name]["tracks"].append(
                     {
                         "encoded": track.track,
                         "info": {
@@ -968,7 +968,7 @@ class Commands(Cog):
                             "isSeekable": track.is_seekable,
                             "author": track.author,
                             "length": track.duration,
-                            "isStream": track.is_stream,
+                            "isStream": track.stream,
                             "position": track.position,
                             "title": track.title,
                             "uri": track.uri,
@@ -981,7 +981,9 @@ class Commands(Cog):
                     },
                 )
 
-            data[name]["data"]["tracks"] = data[name]["data"]["tracks"]
+            data[name]["tracks"] = data[name]["tracks"]
+            
+            print(data[name]["tracks"])
 
             with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
@@ -1015,7 +1017,7 @@ class Commands(Cog):
             ctx=ctx,
         )
 
-        del data[name]["data"]["tracks"][song]
+        del data[name]["tracks"][song]
 
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8"
@@ -1090,7 +1092,7 @@ class Commands(Cog):
             with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            if not data[name]["data"]["tracks"]:
+            if not data[name]["tracks"]:
                 return await ctx.interaction.edit_original_response(
                     embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                 )
@@ -1189,7 +1191,7 @@ class Commands(Cog):
                     ) as f:
                         data = json.load(f)
 
-                    if not data[name]["data"]["tracks"]:
+                    if not data[name]["tracks"]:
                         return await ctx.interaction.edit_original_response(
                             embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                         )
@@ -1223,7 +1225,7 @@ class Commands(Cog):
                 with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-                if not data[name]["data"]["tracks"]:
+                if not data[name]["tracks"]:
                     return await ctx.interaction.edit_original_response(
                         embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                     )

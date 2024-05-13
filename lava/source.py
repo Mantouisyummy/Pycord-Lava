@@ -72,12 +72,8 @@ class SpotifySource(BaseSource):
 
         spotify_client_id = getenv("SPOTIFY_CLIENT_ID")
         spotify_client_secret = getenv("SPOTIFY_CLIENT_SECRET")
-
-        credentials = SpotifyClientCredentials(
-
         credentials = SpotifyClientCredentials(
             client_id=spotify_client_id,
-            client_secret=spotify_client_secret
             client_secret=spotify_client_secret
         )
 

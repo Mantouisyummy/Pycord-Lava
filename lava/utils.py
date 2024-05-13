@@ -71,7 +71,7 @@ def bytes_to_gb(bytes_: int) -> float:
     return bytes_ / 1024 ** 3
 
 
-def split_list(input_list, chunk_size) -> Iterable[List[AudioTrack]]:
+def split_list(input_list, chunk_size) -> Iterable[list[AudioTrack]]:
     length = len(input_list)
 
     num_sublists = length // chunk_size

@@ -44,7 +44,7 @@ class PlaylistModal(Modal):
             for query in self.children[0].value.split("\n"):
                 result = await self.bot.lavalink.get_tracks(query, check_local=True)
                 for track in result.tracks:
-                    data[self.name]["data"]["tracks"].append(
+                    data[self.name]["tracks"].append(
                         {
                             "encoded": track.track,
                             "info": {
@@ -52,7 +52,7 @@ class PlaylistModal(Modal):
                                 "isSeekable": track.is_seekable,
                                 "author": track.author,
                                 "length": track.duration,
-                                "isStream": track.is_stream,
+                                "isStream": track.stream,
                                 "position": track.position,
                                 "title": track.title,
                                 "uri": track.uri,
