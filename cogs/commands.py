@@ -983,8 +983,6 @@ class Commands(Cog):
 
             data[name]["data"]["tracks"] = data[name]["data"]["tracks"]
             
-            print(data[name]["data"]["tracks"])
-
             with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
 
