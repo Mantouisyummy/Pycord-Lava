@@ -960,7 +960,7 @@ class Commands(Cog):
             )
 
             for track in result.tracks:
-                data[name]["tracks"].append(
+                data[name]["data"]["tracks"].append(
                     {
                         "encoded": track.track,
                         "info": {
@@ -981,9 +981,9 @@ class Commands(Cog):
                     },
                 )
 
-            data[name]["tracks"] = data[name]["tracks"]
+            data[name]["data"]["tracks"] = data[name]["data"]["tracks"]
             
-            print(data[name]["tracks"])
+            print(data[name]["data"]["tracks"])
 
             with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
@@ -1017,7 +1017,7 @@ class Commands(Cog):
             ctx=ctx,
         )
 
-        del data[name]["tracks"][song]
+        del data[name]["data"]["tracks"][song]
 
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8"
@@ -1092,7 +1092,7 @@ class Commands(Cog):
             with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            if not data[name]["tracks"]:
+            if not data[name]["data"]["tracks"]:
                 return await ctx.interaction.edit_original_response(
                     embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                 )
@@ -1191,7 +1191,7 @@ class Commands(Cog):
                     ) as f:
                         data = json.load(f)
 
-                    if not data[name]["tracks"]:
+                    if not data[name]["data"]["tracks"]:
                         return await ctx.interaction.edit_original_response(
                             embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                         )
@@ -1225,7 +1225,7 @@ class Commands(Cog):
                 with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-                if not data[name]["tracks"]:
+                if not data[name]["data"]["tracks"]:
                     return await ctx.interaction.edit_original_response(
                         embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                     )
