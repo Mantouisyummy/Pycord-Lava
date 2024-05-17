@@ -104,7 +104,7 @@ class Commands(Cog):
             ).hex
             choices.append(
                 OptionChoice(
-                    name=name + f" ({len(data[name]['tracks'])}首)", value=value
+                    name=name + f" ({len(data[name]['data']['tracks'])}首)", value=value
                 )
             )
 
@@ -778,8 +778,7 @@ class Commands(Cog):
                 data = json.load(f)
 
             if name not in data.keys():
-                data = (
-                    {
+                data = {
                         name: {
                             "public": public,
                             "loadType": "playlist",
@@ -789,8 +788,7 @@ class Commands(Cog):
                                 "tracks": [],
                             },
                         },
-                    },
-                )
+                    }
 
                 with open(
                     f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8"
@@ -1206,7 +1204,7 @@ class Commands(Cog):
                                 title=f"{name} - 歌單資訊",
                                 description="\n".join(
                                     [
-                                        f"**[{index + 1 + (iteration * 10)}]** [{track.title}]({track.uri}) ({LavaPlayer.__format_time((track.duration))}) by {track.author}"
+                                        f"**[{index + 1 + (iteration * 10)}]** [{track.title}]({track.uri}) ({LavaPlayer._format_time((track.duration))}) by {track.author}"
                                         for index, track in enumerate(songs_in_page)
                                     ]
                                 ),

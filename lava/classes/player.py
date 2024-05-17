@@ -402,7 +402,7 @@ class LavaPlayer(DefaultPlayer):
         return embed
 
     @staticmethod
-    def __format_time(time_ms: Union[float, int]) -> str:
+    def _format_time(time_ms: Union[float, int]) -> str:
         """
         Formats the time into DD:HH:MM:SS
 
