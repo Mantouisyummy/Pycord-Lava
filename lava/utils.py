@@ -82,57 +82,6 @@ def split_list(input_list, chunk_size) -> Iterable[list[AudioTrack]]:
     if length % chunk_size != 0:
         yield input_list[num_sublists * chunk_size:]
 
-async def find_playlist(playlist:str, ctx: ApplicationContext | AutocompleteContext) -> Union[Tuple[str, Optional[str]], int]:
-    """
-    Find a playlist by uuid.
-
-    :param playlist: The uuid of the playlist.
-    :param ctx: The application context.
-    :param public: Flag indicating whether to search for public playlists.
-    :return: A tuple containing the title and ID of the found playlist if it exists and meets the criteria,
-             or -1 if the playlist doesn't exist or doesn't meet the criteria.
-             or -1 if the playlist doesn't exist or doesn't meet the criteria.
-    """
-
-    result = Playlist.from_uuid(playlist)
-
-    if isinstance(ctx, ApplicationContext): 
-        if result.public is False and result.user_id != ctx.author.id:
-            await ctx.interaction.edit_original_response(embed=ErrorEmbed(
-                title="此歌單是非公開的!"
-            ))
-        elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.author.id:
-            return result.name, result.user_id
-        else:
-            return result.name, result.user_id
-
-    result = Playlist.from_uuid(playlist)
-
-    if isinstance(ctx, ApplicationContext): 
-        if result.public is False and result.user_id != ctx.author.id:
-            await ctx.interaction.edit_original_response(embed=ErrorEmbed(
-                title="此歌單是非公開的!"
-            ))
-        elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.author.id:
-            return result.name, result.user_id
-        else:
-            return result.name, result.user_id
-    else:
-        if result.public is False and result.user_id != ctx.interaction.user.id:
-            await ctx.interaction.edit_original_response(embed=ErrorEmbed(
-                title="此歌單是非公開的!"
-            ))
-        elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.interaction.user.id:
-            return result.name, result.user_id
-        if result.public is False and result.user_id != ctx.interaction.user.id:
-            await ctx.interaction.edit_original_response(embed=ErrorEmbed(
-                title="此歌單是非公開的!"
-            ))
-        elif (result.public is False or result.public is True or result.public is None) and result.user_id == ctx.interaction.user.id:
-            return result.name, result.user_id
-        else:
-            return result.name, result.user_id
-
 async def ensure_voice(bot, should_connect: bool, interaction: Interaction = None, ctx:ApplicationContext = None) -> LavalinkVoiceClient:
     """
     This check ensures that the bot and command author are in the same voice channel.

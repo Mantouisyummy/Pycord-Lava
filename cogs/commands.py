@@ -16,7 +16,6 @@ from discord import (
 )
 from discord.ext.commands import Cog
 from discord.ui import Button, View
-from discord.errors import NotFound
 from lavalink import (
     LoadResult,
     LoadType,
@@ -39,13 +38,13 @@ from lava.utils import (
     get_commit_hash,
     get_upstream_url,
     get_current_branch,
-    find_playlist,
 )
 from lava.view import View
 from lava.paginator import Paginator
 from lava.modal import PlaylistModal
 from lava.paginator import Paginator
 from lava.classes.player import LavaPlayer
+from lava.playlist import Playlist, Mode
 
 allowed_filters = {
     "timescale": Timescale,
@@ -89,96 +88,62 @@ class Commands(Cog):
         return choices
 
     async def playlist_search(self, ctx: AutocompleteContext):
-        playlist = ctx.options["playlist"]
+        uid = ctx.options["playlist"]
 
         choices = []
 
-        with open(
-            f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
-        ) as f:
-            data = json.load(f)
-
-        for name in data.keys():
-            value = uuid.uuid5(
-                uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + name
-            ).hex
+        if not uid:
+            playlist = Playlist.find_playlist(user_id=ctx.interaction.user.id)
             choices.append(
                 OptionChoice(
-                    name=name + f" ({len(data[name]['data']['tracks'])}首)", value=value
+                    name=playlist.name + f" ({len(playlist.to_dict()[playlist.name]['data']['tracks'])}首)", value=playlist.uid
                 )
             )
-
-        if not playlist:
             return choices
-
         return choices
 
     async def global_playlist_search(self, ctx: AutocompleteContext):
-        playlist = ctx.options["playlist"]
+        uid = ctx.options["playlist"]
 
         choices = []
 
-        if not playlist:
-            if path.isfile(f"./playlist/{ctx.interaction.user.id}.json"):
-                with open(
-                    f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
-                ) as f:
-                    data = json.load(f)
-                for title in data.keys():
-                    value = uuid.uuid5(
-                        uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + title
-                    ).hex
-                    choices.append(OptionChoice(name=title, value=value))
-
-                return choices
-            else:
-                return []
-        try:
-            title, id = await find_playlist(playlist=playlist, ctx=ctx)
-            value = uuid.uuid5(uuid.NAMESPACE_DNS, str(id) + title).hex
-
-            choices.append(OptionChoice(name=title, value=value))
-
-            return choices
-
-        except (NotFound, TypeError) as e:
-            choices.append(OptionChoice(name="此歌單為非公開!", value=playlist))
-            return choices
-
+        if not uid:
+            playlist = Playlist.find_playlist(user_id=ctx.interaction.user.id)
+            choices.append(
+                OptionChoice(
+                    name=playlist.name + f" ({len(playlist.to_dict()[playlist.name]['data']['tracks'])}首)", value=playlist.uid
+                )
+            )
+        else:
+            playlist = Playlist.find_playlist(uid=uid, mode=Mode.GLOBAL, user_id=ctx.interaction.user.id)
+            if playlist: 
+                choices.append(
+                    OptionChoice(
+                        name=playlist.name + f" 歌單擁有者 by ({self.bot.get_user(playlist.owner_id)})", value=playlist.uid
+                    )
+                )
+        return choices
     async def songs_search(self, ctx: AutocompleteContext):
         playlist = ctx.options["playlist"]
         song = ctx.options["song"]
 
         choices = []
-        name = ""
 
         if not playlist:
             return []
-        if path.isfile(f"./playlist/{ctx.interaction.user.id}.json"):
-            with open(f"./playlist/{ctx.interaction.user.id}.json") as f:
-                data = json.load(f)
-
-            for key in data.keys():
-                if (
-                    uuid.uuid5(
-                        uuid.NAMESPACE_DNS, str(ctx.interaction.user.id) + key
-                    ).hex
-                    == playlist
-                ):
-                    name = key
-                    break
-
-            result = LoadResult.from_dict(data[name])
+        
+        playlist = Playlist.find_playlist(uid=playlist, user_id=ctx.interaction.user.id)
+        
+        if playlist:
+            result = LoadResult.from_dict(playlist.to_dict())
 
             for track in result.tracks:
                 choices.append(OptionChoice(name=track.title, value=track.position))
-        else:
-            return []
 
-        if not song:
+            if not song:
+                return choices
+
             return choices
-
-        return choices
 
     @music.command(name="info", description="顯示機器人資訊")
     async def info(self, ctx: ApplicationContext):
@@ -838,8 +803,8 @@ class Commands(Cog):
             "是否公開",
             name="public",
             choices=[
-                OptionChoice(name="True", value=True),
-                OptionChoice(name="False", value=False),
+                OptionChoice(name="是", value=True),
+                OptionChoice(name="否", value=False),
             ],
             required=True,
         ),
@@ -850,14 +815,12 @@ class Commands(Cog):
             with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            playlist_info = await find_playlist(playlist=playlist, ctx=ctx)
+            playlist_info = Playlist.find_playlist(uid=playlist, user_id=ctx.author.id)
 
-            if playlist_info is None:
-                return playlist_info
+            if playlist is None:
+                return await ctx.interaction.edit_original_response(embed=ErrorEmbed(f"你沒有播放清單!"))
 
-            name = playlist_info[0]
-
-            data[name]["public"] = public
+            data[playlist_info.name]["public"] = public
 
             with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
@@ -890,23 +853,21 @@ class Commands(Cog):
         with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        for i in data.keys():
-            if uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.author.id) + i).hex == playlist:
-                name = i
-                break
+        playlist_info = Playlist.find_playlist(uid=playlist, user_id=ctx.author.id)
+        
+        if Playlist.comparison(playlist_info, user_id=ctx.author.id):
+            data[newname] = data.pop(playlist_info.name)
+
+            with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+
+            await ctx.interaction.edit_original_response(
+                embed=SuccessEmbed(f"更名成功! 新的名字為 `{newname}`")
+            )
         else:
             return await ctx.interaction.edit_original_response(
                 embed=ErrorEmbed(f"這不是你的播放清單!")
             )
-
-        data[newname] = data.pop(name)
-
-        with open(f"./playlist/{ctx.author.id}.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-
-        await ctx.interaction.edit_original_response(
-            embed=SuccessEmbed(f"更名成功! 新的名字為 `{newname}`")
-        )
 
     @playlist.command(name="join", description="加入歌曲至指定的歌單")
     async def join(
@@ -923,16 +884,13 @@ class Commands(Cog):
             default=False,
         ),
     ):
+        playlist_info = Playlist.find_playlist(uid=playlist, user_id=ctx.author.id)
+
         if query is False:
             with open(f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            name, user_id = await find_playlist(
-                playlist=playlist,
-                ctx=ctx,
-            )
-
-            modal = PlaylistModal(title="加入歌曲", name=name, bot=self.bot)
+            modal = PlaylistModal(title="加入歌曲", name=playlist_info.name, bot=self.bot)
             await ctx.send_modal(modal)
 
         else:
@@ -945,48 +903,41 @@ class Commands(Cog):
             with open(f"./playlist/{ctx.user.id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            for key in data.keys():
-                if (
-                    uuid.uuid5(uuid.NAMESPACE_DNS, str(ctx.user.id) + key).hex
-                    == playlist
-                ):
-                    name = key
-                    break
-
-            result: LoadResult = await self.bot.lavalink.get_tracks(
-                query, check_local=True
-            )
-
-            for track in result.tracks:
-                data[name]["data"]["tracks"].append(
-                    {
-                        "encoded": track.track,
-                        "info": {
-                            "identifier": track.identifier,
-                            "isSeekable": track.is_seekable,
-                            "author": track.author,
-                            "length": track.duration,
-                            "isStream": track.stream,
-                            "position": track.position,
-                            "title": track.title,
-                            "uri": track.uri,
-                            "sourceName": track.source_name,
-                            "artworkUrl": track.artwork_url,
-                            "isrc": track.isrc,
-                        },
-                        "pluginInfo": track.plugin_info,
-                        "userData": track.user_data,
-                    },
+            if Playlist.comparison(playlist_info, user_id=ctx.author.id):
+                result: LoadResult = await self.bot.lavalink.get_tracks(
+                    query, check_local=True
                 )
 
-            data[name]["data"]["tracks"] = data[name]["data"]["tracks"]
-            
-            with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
+                for track in result.tracks:
+                    data[playlist_info.name]["data"]["tracks"].append(
+                        {
+                            "encoded": track.track,
+                            "info": {
+                                "identifier": track.identifier,
+                                "isSeekable": track.is_seekable,
+                                "author": track.author,
+                                "length": track.duration,
+                                "isStream": track.stream,
+                                "position": track.position,
+                                "title": track.title,
+                                "uri": track.uri,
+                                "sourceName": track.source_name,
+                                "artworkUrl": track.artwork_url,
+                                "isrc": track.isrc,
+                            },
+                            "pluginInfo": track.plugin_info,
+                            "userData": track.user_data,
+                        },
+                    )
 
-            await ctx.interaction.edit_original_response(
-                embed=SuccessEmbed(title=f"添加成功!")
-            )
+                data[playlist_info.name]["data"]["tracks"] = data[playlist_info.name]["data"]["tracks"]
+                
+                with open(f"./playlist/{ctx.user.id}.json", "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+
+                await ctx.interaction.edit_original_response(
+                    embed=SuccessEmbed(title=f"添加成功!")
+                )
 
     @playlist.command(name="remove", description="移除歌曲至指定的歌單")
     async def remove(
@@ -1008,12 +959,9 @@ class Commands(Cog):
         ) as f:
             data = json.load(f)
 
-        name, user_id = await find_playlist(
-            playlist=playlist,
-            ctx=ctx,
-        )
+        playlist_info = Playlist.find_playlist(uid=playlist, user_id=ctx.author.id)
 
-        del data[name]["data"]["tracks"][song]
+        del data[playlist_info.name]["data"]["tracks"][song]
 
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8"
@@ -1038,18 +986,14 @@ class Commands(Cog):
             embed=LoadingEmbed(title="正在讀取中...")
         )
 
-        name = ""
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "r", encoding="utf-8"
         ) as f:
             data = json.load(f)
 
-        name, user_id = await find_playlist(
-            playlist=playlist,
-            ctx=ctx,
-        )
+        playlist_info = Playlist.find_playlist(uid=playlist, user_id=ctx.author.id)
 
-        del data[name]
+        del data[playlist_info.name]
 
         with open(
             f"./playlist/{ctx.interaction.user.id}.json", "w", encoding="utf-8"
@@ -1077,18 +1021,15 @@ class Commands(Cog):
                 embed=LoadingEmbed(title="正在讀取中...")
             )
 
-            result = await find_playlist(playlist=playlist, ctx=ctx)
+            playlist_info = Playlist.find_playlist(uid=playlist, user_id=ctx.author.id, mode=Mode.GLOBAL)
 
-            if result is None:
-                return result
+            if playlist_info is (None or False):
+                return await ctx.interaction.edit_original_response(embed=ErrorEmbed(title="此歌單為非公開!"))
 
-            name = result[0]
-            user_id = result[1]
-
-            with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
+            with open(f"./playlist/{playlist_info.owner_id}.json", "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            if not data[name]["data"]["tracks"]:
+            if not data[playlist_info.name]["data"]["tracks"]:
                 return await ctx.interaction.edit_original_response(
                     embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                 )
@@ -1120,7 +1061,7 @@ class Commands(Cog):
 
             index = sum(1 for t in player.queue if t.requester)
 
-            results = LoadResult.from_dict(data[name])
+            results = LoadResult.from_dict(data[playlist_info.name])
 
             for iter_index, track in enumerate(results.tracks):
                 player.add(
@@ -1172,27 +1113,24 @@ class Commands(Cog):
     ):
         await ctx.defer()
 
-        result = await find_playlist(playlist=playlist, ctx=ctx)
+        playlist_info = Playlist.find_playlist(uid=playlist, user_id=ctx.author.id, mode=Mode.GLOBAL)
 
-        if result is None:
-            return result
+        if playlist_info is (None or False):
+            return await ctx.interaction.edit_original_response(embed=ErrorEmbed(title="此歌單為非公開!"))
         else:
-            name = result[0]
-            user_id = result[1]
-
-            if ctx.author.id == user_id:
+            if ctx.author.id == playlist_info.owner_id:
                 try:
                     with open(
                         f"./playlist/{ctx.author.id}.json", "r", encoding="utf-8"
                     ) as f:
                         data = json.load(f)
 
-                    if not data[name]["data"]["tracks"]:
+                    if not data[playlist_info.name]["data"]["tracks"]:
                         return await ctx.interaction.edit_original_response(
                             embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                         )
 
-                    results = LoadResult.from_dict(data[name])
+                    results = LoadResult.from_dict(data[playlist_info.name])
 
                     pages: list[InfoEmbed] = []
 
@@ -1201,7 +1139,7 @@ class Commands(Cog):
                     ):
                         pages.append(
                             InfoEmbed(
-                                title=f"{name} - 歌單資訊",
+                                title=f"{playlist_info.name} - 歌單資訊",
                                 description="\n".join(
                                     [
                                         f"**[{index + 1 + (iteration * 10)}]** [{track.title}]({track.uri}) ({LavaPlayer._format_time((track.duration))}) by {track.author}"
@@ -1216,17 +1154,16 @@ class Commands(Cog):
                 except TypeError:
                     pass
             else:
-                name, user_id = await find_playlist(playlist=playlist, ctx=ctx)
 
-                with open(f"./playlist/{user_id}.json", "r", encoding="utf-8") as f:
+                with open(f"./playlist/{playlist_info.owner_id}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-                if not data[name]["data"]["tracks"]:
+                if not data[playlist_info.name]["data"]["tracks"]:
                     return await ctx.interaction.edit_original_response(
                         embed=InfoEmbed("歌單", "歌單中沒有歌曲")
                     )
 
-                results = LoadResult.from_dict(data[name])
+                results = LoadResult.from_dict(data[playlist_info.name])
 
                 pages: list[InfoEmbed] = []
 
@@ -1235,7 +1172,7 @@ class Commands(Cog):
                 ):
                     pages.append(
                         InfoEmbed(
-                            title=f"{name} - 歌單資訊 by {self.bot.get_user(int(user_id)).name}",
+                            title=f"{playlist_info.name} - 歌單資訊 by {self.bot.get_user(int(playlist_info.owner_id)).name}",
                             description="\n".join(
                                 [
                                     f"**[{index + 1 + (iteration * 10)}]** {track.title}"

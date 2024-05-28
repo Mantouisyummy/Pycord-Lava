@@ -352,9 +352,9 @@ class LavaPlayer(DefaultPlayer):
 
         if self.current:
             embed.title = self.current.title
-            embed.description = f"`{self.__format_time(self.position)}`" \
+            embed.description = f"`{self._format_time(self.position)}`" \
                                 f" {self.__generate_progress_bar(self.current.duration, self.position)} " \
-                                f"`{self.__format_time(self.current.duration)}`"
+                                f"`{self._format_time(self.current.duration)}`"
 
             embed.add_field(name="👤 作者", value=self.current.author, inline=True)
             embed.add_field(
