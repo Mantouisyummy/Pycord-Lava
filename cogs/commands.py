@@ -1,12 +1,10 @@
 import re
 import discord
 import json
-import uuid
 
 from os import getpid, path
 from discord import (
     Option,
-    OptionChoice,
     ButtonStyle,
     Embed,
     ApplicationContext,
@@ -15,7 +13,7 @@ from discord import (
     Interaction
 )
 from discord.ext.commands import Cog
-from discord.ui import Button, View
+from discord.ui import Button
 from lavalink import (
     LoadResult,
     LoadType,
@@ -40,7 +38,6 @@ from lava.utils import (
     get_current_branch,
 )
 from lava.view import View
-from lava.paginator import Paginator
 from lava.modal import PlaylistModal
 from lava.paginator import Paginator
 from lava.classes.player import LavaPlayer
@@ -306,7 +303,7 @@ class Commands(Cog):
         if not player.is_playing:
             await player.play()
 
-        await player.update_display(await ctx.interaction.original_response(), delay=5)
+        await player.update_display(await ctx.interaction.original_response())
 
     @music.command(name="skip", description="跳過當前播放的歌曲")
     async def skip(

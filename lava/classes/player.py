@@ -1,17 +1,19 @@
 import asyncio
 from time import time
-from typing import TYPE_CHECKING, Optional, Union, List, Dict
-from random import randrange
+from typing import TYPE_CHECKING, Optional, Union, List
 
+import pylrc
+import syncedlyrics
 from discord import Message, ButtonStyle, Embed, Colour, Guild, Interaction
 from discord.ui import Button
 from lavalink import DefaultPlayer, Node, parse_time, TrackEndEvent, RequestError, PlayerErrorEvent, TrackStuckEvent, \
-    QueueEndEvent, TrackLoadFailedEvent, AudioTrack, DeferredAudioTrack
+    QueueEndEvent, TrackLoadFailedEvent, AudioTrack
 
+from pylrc.classes import Lyrics, LyricLine
 from lavalink.common import MISSING
 
 from lava.embeds import ErrorEmbed
-from lava.utils import get_recommended_tracks, get_image_size
+from lava.utils import get_recommended_tracks, get_image_size, find_lyrics_within_range
 from lava.view import View
 
 if TYPE_CHECKING:
@@ -22,12 +24,15 @@ class LavaPlayer(DefaultPlayer):
     def __init__(self, bot: "Bot", guild_id: int, node: Node):
         super().__init__(guild_id, node)
 
+        self.history = []
         self.bot: Bot = bot
         self.message: Optional[Message] = None
 
         self._guild: Optional[Guild] = None
 
         self.autoplay: bool = False
+        self.is_adding_song: bool = False
+        self.show_lyrics: bool = True
 
         self._last_update: int = 0
         self._last_position = 0
@@ -37,6 +42,28 @@ class LavaPlayer(DefaultPlayer):
         self.__last_image_url: str = ""
 
         self.queue: List[AudioTrack] = []
+        self._lyrics: Union[Lyrics[LyricLine], None] = None
+
+    @property
+    def lyrics(self) -> Union[Lyrics[LyricLine], None]:
+        if self._lyrics == MISSING:
+            return MISSING
+
+        if self._lyrics is not None:
+            return self._lyrics
+
+        try:
+            lrc = syncedlyrics.search(f"{self.current.title} {self.current.author}")
+        except Exception:
+            return MISSING
+
+        if not lrc:
+            self._lyrics = MISSING
+            return self._lyrics
+
+        self._lyrics = pylrc.parse(lrc)
+
+        return self._lyrics
 
     @property
     def guild(self) -> Optional[Guild]:
@@ -44,107 +71,6 @@ class LavaPlayer(DefaultPlayer):
             self._guild = self.bot.get_guild(self.guild_id)
 
         return self._guild
-    
-    async def play(self,
-                   track: Optional[Union[AudioTrack, 'DeferredAudioTrack', Dict[str, Union[Optional[str], bool, int]]]] = None,
-                   start_time: int = 0,
-                   end_time: int = MISSING,
-                   no_replace: bool = MISSING,
-                   volume: int = MISSING,
-                   pause: bool = False,
-                   **kwargs):
-        """|coro|
-
-        Plays the given track.
-
-        This method is basically same as the original DefaultPlayer.play(),
-        but changed the way the songs are played.
-
-        Parameters
-        ----------
-        track: Optional[Union[:class:`DeferredAudioTrack`, :class:`AudioTrack`, Dict[str, Union[Optional[str], bool, int]]]]
-            The track to play. If left unspecified, this will default to the first track in the queue. Defaults to ``None``
-            which plays the next song in queue. Accepts either an AudioTrack or a dict representing a track
-            returned from Lavalink.
-        start_time: :class:`int`
-            The number of milliseconds to offset the track by.
-            If left unspecified, the track will start from the beginning.
-        end_time: :class:`int`
-            The position at which the track should stop playing.
-            This is an absolute position, so if you want the track to stop at 1 minute, you would pass 60000.
-            If left unspecified, the track will play through to the end.
-        no_replace: :class:`bool`
-            If set to true, operation will be ignored if the player already has a current track.
-            If left unspecified, the currently playing track will always be replaced.
-        volume: :class:`int`
-            The initial volume to set. This is useful for changing the volume between tracks etc.
-            If left unspecified, the volume will remain at its current setting.
-        pause: :class:`bool`
-            Whether to immediately pause the track after loading it. Defaults to ``False``.
-        **kwargs: Any
-            The kwargs to use when playing. You can specify any extra parameters that may be
-            used by plugins, which offer extra features not supported out-of-the-box by Lavalink.py.
-
-        Raises
-        ------
-        :class:`ValueError`
-            If invalid values were provided for ``start_time`` or ``end_time``.
-        :class:`TypeError`
-            If wrong types were provided for ``no_replace``, ``volume`` or ``pause``.
-        """
-        if isinstance(no_replace, bool) and no_replace and self.is_playing:
-            return
-
-        if track is not None and isinstance(track, dict):
-            track = AudioTrack(track, 0)
-
-        if self.loop > 0 and self.current:
-            if self.loop == 1:
-                if track is not None:
-                    self.queue.insert(0, self.current)
-                else:
-                    track = self.current
-            elif self.loop == 2:
-                self.queue.append(self.current)
-
-        self._last_position = 0
-        self.position_timestamp = 0
-        self.paused = pause
-
-        if not track:
-            if not self.queue:
-                await self.stop()  # Also sets current to None.
-                await self.client._dispatch_event(QueueEndEvent(self))
-                return
-            elif self.is_playing and self.current == self.queue[-1]:
-                await self.stop()  # Also sets current to None.
-                await self.client._dispatch_event(QueueEndEvent(self))
-                return 
-
-            if not self.current or len(self.queue) <= 1:
-                track_at = randrange(len(self.queue)) if self.shuffle else 0
-            else:
-                track_at = randrange(len(self.queue)) if self.shuffle else (self.queue.index(self.current) + 1)
-
-            track = self.queue[track_at]
-
-        if start_time is not MISSING:
-            if not isinstance(start_time, int) or not 0 <= start_time < track.duration:
-                raise ValueError('start_time must be an int with a value equal to, or greater than 0, and less than the track duration')
-
-        if end_time is not MISSING:
-            if not isinstance(end_time, int) or not 1 <= end_time <= track.duration:
-                raise ValueError('end_time must be an int with a value equal to, or greater than 1, and less than, or equal to the track duration')
-
-        await self.play_track(track, start_time, end_time, no_replace, volume, pause, **kwargs)
-
-    async def previous(self):
-        """
-        Plays the previous track in the queue.
-        """
-        if len(self.queue) > 1 and (self.queue.index(self.current) - 1) != -1:
-            await self.play(self.queue[self.queue.index(self.current) - 1])
-            return
 
     async def check_autoplay(self) -> bool:
         """
@@ -152,16 +78,38 @@ class LavaPlayer(DefaultPlayer):
 
         :return: True if tracks were added, False otherwise.
         """
-        if not self.autoplay or len(self.queue) >= 5:
+        if not self.autoplay or self.is_adding_song or len(self.queue) >= 30:
             return False
+
+        self.is_adding_song = True
+
         self.bot.logger.info(
             "Queue is empty, adding recommended track for guild %s...", self.guild
         )
 
         recommendations = await get_recommended_tracks(self, self.current, 5 - len(self.queue))
 
+        if not recommendations:
+            self.is_adding_song = False
+            self.autoplay = False
+
+            if self.message:
+                message = await self.message.channel.send(
+                    embed=ErrorEmbed(
+                        self.bot.get_text(
+                            'error.autoplay_failed', self.locale, '我找不到任何推薦的歌曲，所以我停止了自動播放'
+                        ),
+                    )
+                )
+
+                await self.update_display(message, delay=5)
+
+            return False
+
         for recommendation in recommendations:
             self.add(requester=0, track=recommendation)
+
+        self.is_adding_song = False
 
     async def toggle_autoplay(self):
         """
@@ -280,28 +228,56 @@ class LavaPlayer(DefaultPlayer):
                     row=1
                 ),
                 Button(
-                    style=ButtonStyle.grey,
-                    emoji="⬛",
-                    custom_id="control.empty",
+                    style=ButtonStyle.green if self.show_lyrics else ButtonStyle.grey,
+                    emoji="🎤",
+                    custom_id="control.lyrics",
                     row=1
                 )
             ]
-    
+
+        embeds = [await self.__generate_display_embed()]
+
+        if self.is_playing and self.show_lyrics:
+            embeds.append(await self.__generate_lyrics_embed())
+
         view = View()
-        if view.children == []:
+        if not view.children:
             for item in components:
                 view.add_item(item)
 
         if interaction:
             await interaction.response.edit_message(
-                embed=(await self.__generate_display_embed()), view=view
+                embeds=embeds, view=view
             )
 
         else:
-            await self.message.edit(embed=(await self.__generate_display_embed()), view=view)
+            await self.message.edit(embeds=embeds, view=view)
 
         self.bot.logger.debug(
             "Updating player in guild %s display message to %s", self.bot.get_guild(self.guild_id), self.message.id
+        )
+
+    async def __generate_lyrics_embed(self) -> Embed:
+        """Generate the lyrics embed for the player."""
+        if self.lyrics is MISSING:
+            return Embed(
+                title='🎤 | 歌詞',
+                description='*你得自己唱出這首歌的歌詞*',
+                color=Colour.red()
+            )
+
+        lyrics_in_range = find_lyrics_within_range(self.lyrics, (self.position / 1000), 5.0)
+
+        lyrics_text = '\n'.join(
+            [
+                f"## {lyric.text}"
+                for lyric in lyrics_in_range
+            ]
+        ) or "## ..."
+
+        return Embed(
+            title='🎤 | 歌詞', description=lyrics_text,
+            color=Colour.blurple()
         )
 
     async def __generate_display_embed(self) -> Embed:
@@ -375,7 +351,7 @@ class LavaPlayer(DefaultPlayer):
                         for index, track in enumerate(self.queue[:5])
                     ]
                 ) + (f"\n還有更多..." if len(self.queue) > 5 else "")) or
-                    "空",
+                      "空",
                 inline=True
             )
             embed.add_field(
@@ -434,10 +410,10 @@ class LavaPlayer(DefaultPlayer):
         percentage = position / duration
 
         return f"⬜" \
-            f"{'⬜' * round(percentage * 10)}" \
-            f"{'⬜' if percentage != 1 else '⬜'}" \
-            f"{'⬛' * round((1 - percentage) * 10)}" \
-            f"{'⬛' if percentage != 1 else '⬛'}"
+               f"{'⬜' * round(percentage * 10)}" \
+               f"{'⬜' if percentage != 1 else '⬜'}" \
+               f"{'⬛' * round((1 - percentage) * 10)}" \
+               f"{'⬛' if percentage != 1 else '⬛'}"
 
     async def is_current_artwork_wide(self) -> bool:
         """
@@ -519,3 +495,15 @@ class LavaPlayer(DefaultPlayer):
         )
         await self.skip()
         await self.update_display(message, delay=5)
+
+    def reset_lyrics(self):
+        """
+        Reset the lyrics cache.
+        """
+        self._lyrics = None
+
+    async def toggle_lyrics(self):
+        """
+        Toggle lyrics display for the player.
+        """
+        self.show_lyrics = not self.show_lyrics

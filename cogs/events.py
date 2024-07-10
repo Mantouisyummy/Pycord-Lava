@@ -1,17 +1,15 @@
 from logging import getLogger
-from typing import Union
 
-from discord import TextChannel, Thread, InteractionResponded, ApplicationContext, \
+from discord import InteractionResponded, ApplicationContext, \
     Interaction
-from discord.abc import GuildChannel
 from discord.ext import commands
 from discord.ext.commands import Cog, CommandInvokeError
-from lavalink import TrackLoadFailedEvent, DefaultPlayer, PlayerUpdateEvent, TrackEndEvent, QueueEndEvent
+from lavalink import TrackLoadFailedEvent, TrackStartEvent, PlayerUpdateEvent, TrackEndEvent, QueueEndEvent
 
 from lava.bot import Bot
 from lava.embeds import ErrorEmbed
 from lava.errors import MissingVoicePermissions, BotNotInVoice, UserNotInVoice, UserInDifferentChannel
-from lava.utils import ensure_voice, get_recommended_tracks
+from lava.utils import ensure_voice
 from lava.classes.player import LavaPlayer
 
 
@@ -22,6 +20,77 @@ class Events(Cog):
         
     async def cog_load(self):
         await self.bot.wait_until_ready()
+
+    @Cog.listener(name="on_ready")
+    async def on_ready(self):
+        self.bot.lavalink.add_event_hook(self.on_player_update, event=PlayerUpdateEvent)
+        self.bot.lavalink.add_event_hook(self.on_track_start, event=TrackStartEvent)
+        self.bot.lavalink.add_event_hook(self.on_track_end, event=TrackEndEvent)
+        self.bot.lavalink.add_event_hook(self.on_queue_end, event=QueueEndEvent)
+        self.bot.lavalink.add_event_hook(self.on_track_load_failed, event=TrackLoadFailedEvent)
+
+    async def on_player_update(self, event: PlayerUpdateEvent):
+        player: LavaPlayer = event.player
+
+        self.bot.logger.info("Received player update event for guild %s", player.guild)
+
+        _ = self.bot.loop.create_task(player.check_autoplay())
+
+        try:
+            await player.update_display()
+        except ValueError:
+            pass
+
+    async def on_track_start(self, event: TrackStartEvent):
+        player: LavaPlayer = event.player
+
+        self.bot.logger.info("Received track start event for guild %s", player.guild)
+
+        player.reset_lyrics()
+        _ = player.lyrics  # Fetch the lyrics
+
+        try:
+            await player.update_display()
+        except ValueError:
+            pass
+
+    async def on_track_end(self, event: TrackEndEvent):
+        player: LavaPlayer = event.player
+
+        self.bot.logger.info("Received track end event for guild %s", player.guild)
+
+        try:
+            await player.update_display(new_message=await player.message.channel.send("..."))
+        except ValueError:
+            pass
+        except AttributeError:
+            pass
+
+    async def on_queue_end(self, event: QueueEndEvent):
+        player: LavaPlayer = event.player
+
+        self.bot.logger.info("Received queue end event for guild %s", player.guild)
+
+        await player.guild.voice_client.disconnect(force=False)
+
+        try:
+            await player.update_display()
+        except ValueError:
+            pass
+
+    async def on_track_load_failed(self, event: TrackLoadFailedEvent):
+        player: LavaPlayer = event.player
+
+        self.bot.logger.info("Received track load failed event for guild %s", player.guild)
+
+        message = await player.message.channel.send(
+            embed=ErrorEmbed(
+                f"'無法播放歌曲': {event.track['title']}",
+                f"原因: `{event.original or 'Unknown'}`"
+            )
+        )
+        await player.skip()
+        await player.update_display(message, delay=5)
 
     @commands.Cog.listener(name="on_slash_command_error")
     async def on_slash_command_error(self, ctx: ApplicationContext, error: CommandInvokeError):
@@ -104,7 +173,7 @@ class Events(Cog):
                             player.queue.clear()
 
                         case "control.previous":
-                            await player.previous()
+                            await player.seek(0)
 
                         case "control.next":
                             await player.skip()
