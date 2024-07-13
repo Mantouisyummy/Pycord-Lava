@@ -1,32 +1,32 @@
 import subprocess
+from bisect import bisect_left
 from io import BytesIO
-from typing import Iterable, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Iterable, Optional, TYPE_CHECKING, Tuple
 
 import aiohttp
 import imageio
-import youtube_related
-import youtube_search
-from discord import ApplicationContext, AutocompleteContext, Interaction
-from disnake.utils import get
+
+from discord import ApplicationContext, Interaction
+from discord.utils import get
+
 from lavalink import AudioTrack
+from pylrc.classes import LyricLine
 
 from lava.classes.voice_client import LavalinkVoiceClient
 from lava.errors import UserNotInVoice, BotNotInVoice, MissingVoicePermissions, UserInDifferentChannel
-from lava.embeds import ErrorEmbed
-from lava.playlist import Playlist
-
-
 
 if TYPE_CHECKING:
     from lava.classes.player import LavaPlayer
+
 
 def check_remote_diff():
     local_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('utf-8')
 
     remote_commit = subprocess.check_output(['git', 'ls-remote', 'origin', 'HEAD']).split()[0].decode('utf-8')
-    
+
     if local_commit != remote_commit:
         subprocess.call(['git', 'pull'])
+
 
 def get_current_branch() -> str:
     """
@@ -82,7 +82,9 @@ def split_list(input_list, chunk_size) -> Iterable[list[AudioTrack]]:
     if length % chunk_size != 0:
         yield input_list[num_sublists * chunk_size:]
 
-async def ensure_voice(bot, should_connect: bool, interaction: Interaction = None, ctx:ApplicationContext = None) -> LavalinkVoiceClient:
+
+async def ensure_voice(bot, should_connect: bool, interaction: Interaction = None,
+                       ctx: ApplicationContext = None) -> LavalinkVoiceClient:
     """
     This check ensures that the bot and command author are in the same voice channel.
 
@@ -138,6 +140,7 @@ async def ensure_voice(bot, should_connect: bool, interaction: Interaction = Non
                 voice_client.channel, "User must be in the same voice channel as the bot"
             )
 
+
 async def get_recommended_tracks(player: "LavaPlayer", track: AudioTrack, max_results: int) -> list[AudioTrack]:
     """
     Get recommended track from the given track.
@@ -146,27 +149,34 @@ async def get_recommended_tracks(player: "LavaPlayer", track: AudioTrack, max_re
     :param track: The seed tracks to get recommended tracks from.
     :param max_results: The max amount of tracks to get.
     """
-    try:
-        results_from_youtube = await youtube_related.async_fetch(track.uri)
-    except ValueError:  # The track is not a YouTube track
-        search_results = youtube_search.YoutubeSearch(f"{track.title} by {track.author}", 1).to_dict()
+    track = await player.bot.lavalink.decode_track(track.track)  # Gets the original track. Usually from YouTube.
 
-        results_from_youtube = await youtube_related.async_fetch(
-            f"https://youtube.com/watch?v={search_results[0]['id']}"
-        )
+    if track.source_name != "youtube":
+        return []
+
+    results_from_yt = await player.node.get_tracks(
+        f"https://music.youtube.com/watch?v={track.identifier}8&list=RD{track.identifier}"
+    )
 
     results: list[AudioTrack] = []
 
-    for result in results_from_youtube:
-        if result['id'] in [song.identifier for song in player.queue]:  # Don't add duplicate songs
+    skip_first = True
+
+    for result_track in results_from_yt.tracks:
+        if skip_first:
+            skip_first = False
+            continue
+
+        if result_track.identifier in [t.identifier for t in results]:  # Don't add duplicate songs
             continue
 
         if len(results) >= max_results:
             break
 
-        track = (await player.node.get_tracks(f"https://youtube.com/watch?v={result['id']}")).tracks[0]
+        if result_track.identifier in [t.identifier for t in player.queue]:
+            continue
 
-        results.append(track)
+        results.append(result_track)
 
     return results
 
@@ -186,3 +196,26 @@ async def get_image_size(url: str) -> Optional[Tuple[int, int]]:
         img = imageio.imread(BytesIO(data))
 
         return img.shape[1], img.shape[0]
+
+
+def find_lyrics_within_range(lyrics: list[LyricLine], target_seconds: float, range_seconds: float) -> list[LyricLine]:
+    """
+    Find lyrics within a range of the target time.
+    :param lyrics: The lyrics to search from.
+    :param target_seconds: The target time in seconds.
+    :param range_seconds: The range in seconds.
+    :return: The lyrics within the range and the index of the closest lyric.
+    """
+    lyrics.sort(key=lambda x: x.time)
+
+    start_index = bisect_left([lyric.time for lyric in lyrics], target_seconds)
+
+    result = []
+
+    for i in range(start_index, len(lyrics)):
+        if lyrics[i].time - target_seconds > range_seconds:
+            break
+        if 0 <= lyrics[i].time - target_seconds <= range_seconds:
+            result.append(lyrics[i])
+
+    return result
