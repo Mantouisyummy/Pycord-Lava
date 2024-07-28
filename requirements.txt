@@ -8,7 +8,7 @@ yt_dlp
 PyNaCl
 aiohttp
 imageio==2.34.2
-syncedlyrics==1.0.0
+syncedlyrics==1.0.1
 pylrc==0.1.2
 requests==2.32.3
 beautifulsoup4==4.12.3
