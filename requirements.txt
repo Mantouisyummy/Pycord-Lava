@@ -10,5 +10,5 @@ aiohttp
 imageio==2.34.2
 syncedlyrics==1.0.0
 pylrc==0.1.2
-requests==2.32.3
+requests==2.34.2
 beautifulsoup4==4.12.3
