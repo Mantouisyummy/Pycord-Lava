@@ -7,7 +7,7 @@ spotipy
 yt_dlp
 PyNaCl
 aiohttp
-imageio==2.34.2
+imageio==2.37.4
 syncedlyrics==1.0.0
 pylrc==0.1.2
 requests==2.32.3
